@@ -23,7 +23,6 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.auth.oauth2.GooglePublicKeysManager;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.util.Clock;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.ImplFirebaseTrampolines;
@@ -37,6 +36,14 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Map;
 
+/**
+ * You can get an instance of BlockingFirebaseAuth via
+ * {@link FirebaseAuth#getBlockingInstance(FirebaseApp)} and then use it to perform a variety of
+ * authentication-related operations, including generating custom tokens for use by client-side
+ * code, and verifying Firebase ID Tokens received from clients. It also exposes methods that
+ * support provisioning and managing user accounts in a Firebase project. All methods exposed by
+ * this class are blocking.
+ */
 public class BlockingFirebaseAuth {
 
   private static final String INVALID_CREDENTIAL_ERROR = "INVALID_CREDENTIAL";
@@ -58,8 +65,7 @@ public class BlockingFirebaseAuth {
    * Constructor for injecting a GooglePublicKeysManager, which is used to verify tokens are
    * correctly signed. This should only be used for testing to override the default key manager.
    */
-  @VisibleForTesting
-  BlockingFirebaseAuth(
+  private BlockingFirebaseAuth(
       FirebaseApp firebaseApp, GooglePublicKeysManager googlePublicKeysManager, Clock clock) {
     this.firebaseApp = firebaseApp;
     this.googlePublicKeysManager = googlePublicKeysManager;
@@ -69,22 +75,11 @@ public class BlockingFirebaseAuth {
         firebaseApp.getOptions().getHttpTransport());
   }
 
-  /**
-   * Gets the FirebaseAuth instance for the default {@link FirebaseApp}.
-   *
-   * @return The FirebaseAuth instance for the default {@link FirebaseApp}.
-   */
-  public static BlockingFirebaseAuth getInstance() {
+  static BlockingFirebaseAuth getInstance() {
     return BlockingFirebaseAuth.getInstance(FirebaseApp.getInstance());
   }
 
-  /**
-   * Gets an instance of FirebaseAuth for a specific {@link FirebaseApp}.
-   *
-   * @param app The {@link FirebaseApp} to get a FirebaseAuth instance for.
-   * @return A FirebaseAuth instance.
-   */
-  public static synchronized BlockingFirebaseAuth getInstance(FirebaseApp app) {
+  static synchronized BlockingFirebaseAuth getInstance(FirebaseApp app) {
     FirebaseAuthService service = ImplFirebaseTrampolines.getService(app, SERVICE_ID,
         FirebaseAuthService.class);
     if (service == null) {

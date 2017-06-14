@@ -34,8 +34,9 @@ import java.util.concurrent.Callable;
  *
  * <p>You can get an instance of FirebaseAuth via {@link FirebaseAuth#getInstance(FirebaseApp)} and
  * then use it to perform a variety of authentication-related operations, including generating
- * custom tokens for use by client-side code, verifying Firebase ID Tokens received from clients, or
- * creating new FirebaseApp instances that are scoped to a particular authentication UID.
+ * custom tokens for use by client-side code, and verifying Firebase ID Tokens received from
+ * clients. It also exposes methods that support provisioning and managing user accounts in a
+ * Firebase project. All methods exposed by FirebaseAuth are asynchronous.
  */
 public class FirebaseAuth {
 
@@ -46,22 +47,45 @@ public class FirebaseAuth {
   }
 
   /**
-   * Gets the FirebaseAuth instance for the default {@link FirebaseApp}.
+   * Gets the FirebaseAuth instance for the default {@link FirebaseApp}. The returned object
+   * exposes a set of asynchronous methods.
    *
    * @return The FirebaseAuth instance for the default {@link FirebaseApp}.
    */
   public static FirebaseAuth getInstance() {
-    return new FirebaseAuth(BlockingFirebaseAuth.getInstance());
+    return new FirebaseAuth(getBlockingInstance());
   }
 
   /**
-   * Gets an instance of FirebaseAuth for a specific {@link FirebaseApp}.
+   * Gets an instance of FirebaseAuth for a specific {@link FirebaseApp}. The returned
+   * object exposes a set of asynchronous methods.
    *
    * @param app The {@link FirebaseApp} to get a FirebaseAuth instance for.
    * @return A FirebaseAuth instance.
    */
-  public static synchronized FirebaseAuth getInstance(FirebaseApp app) {
-    return new FirebaseAuth(BlockingFirebaseAuth.getInstance(app));
+  public static FirebaseAuth getInstance(FirebaseApp app) {
+    return new FirebaseAuth(getBlockingInstance(app));
+  }
+
+  /**
+   * Gets the BlockingFirebaseAuth instance for the default {@link FirebaseApp}. The returned
+   * object exposes a set of blocking methods.
+   *
+   * @return The BlockingFirebaseAuth instance for the default {@link FirebaseApp}.
+   */
+  public static BlockingFirebaseAuth getBlockingInstance() {
+    return BlockingFirebaseAuth.getInstance();
+  }
+
+  /**
+   * Gets an instance of BlockingFirebaseAuth for a specific {@link FirebaseApp}. The returned
+   * object exposes a set of blocking methods.
+   *
+   * @param app The {@link FirebaseApp} to get a BlockingFirebaseAuth instance for.
+   * @return A BlockingFirebaseAuth instance.
+   */
+  public static BlockingFirebaseAuth getBlockingInstance(FirebaseApp app) {
+    return BlockingFirebaseAuth.getInstance(app);
   }
 
   /**
