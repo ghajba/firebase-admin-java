@@ -161,23 +161,23 @@ public class FirebaseAuthTest {
   }
 
   @Test
-  public void testGetInstance() throws ExecutionException, InterruptedException {
+  public void testGetInstance() throws IOException {
     FirebaseAuth defaultAuth = FirebaseAuth.getInstance();
     assertNotNull(defaultAuth);
-    assertSame(defaultAuth, FirebaseAuth.getInstance());
+    assertSame(defaultAuth.blockingAuth, FirebaseAuth.getInstance().blockingAuth);
     String token =
-        Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(FirebaseApp.getInstance(), false))
+        TestOnlyImplFirebaseTrampolines.getToken(FirebaseApp.getInstance(), false)
             .getToken();
     Assert.assertTrue(!token.isEmpty());
   }
 
   @Test
-  public void testGetInstanceForApp() throws ExecutionException, InterruptedException {
+  public void testGetInstanceForApp() throws IOException {
     FirebaseApp app = FirebaseApp.initializeApp(firebaseOptions, "testGetInstanceForApp");
     FirebaseAuth auth = FirebaseAuth.getInstance(app);
     assertNotNull(auth);
-    assertSame(auth, FirebaseAuth.getInstance(app));
-    String token = Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(app, false)).getToken();
+    assertSame(auth.blockingAuth, FirebaseAuth.getInstance(app).blockingAuth);
+    String token = TestOnlyImplFirebaseTrampolines.getToken(app, false).getToken();
     Assert.assertTrue(!token.isEmpty());
   }
 
@@ -206,10 +206,10 @@ public class FirebaseAuthTest {
     assertNotNull(auth);
     app.delete();
     try {
-      auth.createCustomToken("foo");
+      Tasks.await(auth.createCustomToken("foo"));
       fail("No error thrown when invoking auth after deleting app");
-    } catch (IllegalStateException expected) {
-      // ignore
+    } catch (ExecutionException expected) {
+      assertTrue(expected.getCause() instanceof IllegalStateException);
     }
   }
 
@@ -234,7 +234,7 @@ public class FirebaseAuthTest {
   }
 
   @Test
-  public void testAppWithAuthVariableOverrides() throws ExecutionException, InterruptedException {
+  public void testAppWithAuthVariableOverrides() throws IOException {
     Map<String, Object> authVariableOverrides = Collections.singletonMap("uid", (Object) "uid1");
     FirebaseOptions options =
         new FirebaseOptions.Builder(firebaseOptions)
@@ -242,7 +242,7 @@ public class FirebaseAuthTest {
             .build();
     FirebaseApp app = FirebaseApp.initializeApp(options, "testGetAppWithUid");
     assertEquals("uid1", app.getOptions().getDatabaseAuthVariableOverride().get("uid"));
-    String token = Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(app, false)).getToken();
+    String token = TestOnlyImplFirebaseTrampolines.getToken(app, false).getToken();
     Assert.assertTrue(!token.isEmpty());
   }
 
@@ -297,7 +297,7 @@ public class FirebaseAuthTest {
             .build();
     FirebaseApp app = FirebaseApp.initializeApp(options, "testCreateCustomToken");
     Assert.assertNotNull(
-        Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(app, false)).getToken());
+        TestOnlyImplFirebaseTrampolines.getToken(app, false).getToken());
   }
 
   @Test
@@ -315,8 +315,8 @@ public class FirebaseAuthTest {
       fail("Expected exception.");
     } catch (Exception expected) {
       Assert.assertEquals(
-          "com.google.firebase.FirebaseException: Must initialize FirebaseApp with a certificate "
-              + "credential to call verifyIdToken()",
+          "com.google.firebase.auth.FirebaseAuthException: Must initialize FirebaseApp "
+              + "with a certificate credential to call verifyIdToken()",
           expected.getMessage());
     }
 
@@ -325,8 +325,8 @@ public class FirebaseAuthTest {
       fail("Expected exception.");
     } catch (Exception expected) {
       Assert.assertEquals(
-          "com.google.firebase.FirebaseException: Must initialize FirebaseApp with a certificate "
-              + "credential to call createCustomToken()",
+          "com.google.firebase.auth.FirebaseAuthException: Must initialize FirebaseApp "
+              + "with a certificate credential to call createCustomToken()",
           expected.getMessage());
     }
   }

@@ -18,6 +18,7 @@ package com.google.firebase;
 
 import com.google.firebase.internal.GetTokenResult;
 import com.google.firebase.tasks.Task;
+import java.io.IOException;
 
 /**
  * Provides trampolines into package-private APIs used by components of Firebase
@@ -36,7 +37,8 @@ public final class TestOnlyImplFirebaseTrampolines {
     FirebaseApp.clearInstancesForTest();
   }
 
-  public static Task<GetTokenResult> getToken(FirebaseApp app, boolean forceRefresh) {
+  public static GetTokenResult getToken(FirebaseApp app,
+      boolean forceRefresh) throws IOException {
     return app.getToken(forceRefresh);
   }
 }

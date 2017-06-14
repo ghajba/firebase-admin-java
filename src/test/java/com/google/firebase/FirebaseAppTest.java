@@ -31,7 +31,6 @@ import static org.mockito.Mockito.verify;
 
 import com.google.common.base.Defaults;
 import com.google.common.io.BaseEncoding;
-import com.google.firebase.FirebaseApp.Clock;
 import com.google.firebase.FirebaseApp.TokenRefresher;
 import com.google.firebase.FirebaseOptions.Builder;
 import com.google.firebase.auth.FirebaseCredential;
@@ -260,10 +259,10 @@ public class FirebaseAppTest {
   @Test
   public void testTokenCaching() throws ExecutionException, InterruptedException, IOException {
     FirebaseApp firebaseApp = FirebaseApp.initializeApp(MOCK_CREDENTIAL_OPTIONS, "myApp");
-    GetTokenResult token1 = Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(
-        firebaseApp, false));
-    GetTokenResult token2 = Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(
-        firebaseApp, false));
+    GetTokenResult token1 = TestOnlyImplFirebaseTrampolines.getToken(
+        firebaseApp, false);
+    GetTokenResult token2 = TestOnlyImplFirebaseTrampolines.getToken(
+        firebaseApp, false);
     Assert.assertNotNull(token1);
     Assert.assertNotNull(token2);
     Assert.assertEquals(token1, token2);
@@ -272,10 +271,10 @@ public class FirebaseAppTest {
   @Test
   public void testTokenForceRefresh() throws ExecutionException, InterruptedException, IOException {
     FirebaseApp firebaseApp = FirebaseApp.initializeApp(MOCK_CREDENTIAL_OPTIONS, "myApp");
-    GetTokenResult token1 = Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(
-        firebaseApp, false));
-    GetTokenResult token2 = Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(
-        firebaseApp, true));
+    GetTokenResult token1 = TestOnlyImplFirebaseTrampolines.getToken(
+        firebaseApp, false);
+    GetTokenResult token2 = TestOnlyImplFirebaseTrampolines.getToken(
+        firebaseApp, true);
     Assert.assertNotNull(token1);
     Assert.assertNotNull(token2);
     Assert.assertNotEquals(token1, token2);
@@ -287,17 +286,17 @@ public class FirebaseAppTest {
     FirebaseApp firebaseApp = FirebaseApp.initializeApp(new Builder()
         .setCredential(new ClockedMockFirebaseCredential(clock)).build(), "myApp",
         FirebaseApp.DEFAULT_TOKEN_REFRESHER_FACTORY, clock);
-    GetTokenResult token1 = Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(
-        firebaseApp, false));
-    GetTokenResult token2 = Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(
-        firebaseApp, false));
+    GetTokenResult token1 = TestOnlyImplFirebaseTrampolines.getToken(
+        firebaseApp, false);
+    GetTokenResult token2 = TestOnlyImplFirebaseTrampolines.getToken(
+        firebaseApp, false);
     Assert.assertNotNull(token1);
     Assert.assertNotNull(token2);
     Assert.assertEquals(token1, token2);
 
     clock.timestamp += TimeUnit.HOURS.toMillis(1);
-    GetTokenResult token3 = Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(
-        firebaseApp, false));
+    GetTokenResult token3 = TestOnlyImplFirebaseTrampolines.getToken(
+        firebaseApp, false);
     Assert.assertNotNull(token3);
     Assert.assertNotEquals(token1, token3);
   }
@@ -313,7 +312,7 @@ public class FirebaseAppTest {
   @Test
   public void testAuthStateListenerAddWithInitialToken() throws Exception {
     FirebaseApp firebaseApp = FirebaseApp.initializeApp(MOCK_CREDENTIAL_OPTIONS, "myApp");
-    Tasks.await(firebaseApp.getToken(true));
+    firebaseApp.getToken(true);
     final TaskCompletionSource<Boolean> completionSource = new TaskCompletionSource<>();
     AuthStateListener listener =
         new AuthStateListener() {
@@ -334,7 +333,7 @@ public class FirebaseAppTest {
     firebaseApp.addAuthStateListener(listener);
 
     for (int i = 0; i < 5; i++) {
-      Tasks.await(firebaseApp.getToken(true));
+      firebaseApp.getToken(true);
       verify(listener, times(i + 1)).onAuthStateChanged(Mockito.any(GetTokenResult.class));
     }
   }
@@ -345,11 +344,11 @@ public class FirebaseAppTest {
     AuthStateListener listener = mock(AuthStateListener.class);
     firebaseApp.addAuthStateListener(listener);
 
-    Tasks.await(firebaseApp.getToken(true));
+    firebaseApp.getToken(true);
     verify(listener, times(1)).onAuthStateChanged(Mockito.any(GetTokenResult.class));
 
     reset(listener);
-    Tasks.await(firebaseApp.getToken(false));
+    firebaseApp.getToken(false);
     verify(listener, never()).onAuthStateChanged(Mockito.any(GetTokenResult.class));
   }
 
@@ -359,12 +358,12 @@ public class FirebaseAppTest {
     AuthStateListener listener = mock(AuthStateListener.class);
     firebaseApp.addAuthStateListener(listener);
 
-    Tasks.await(firebaseApp.getToken(true));
+    firebaseApp.getToken(true);
     verify(listener, times(1)).onAuthStateChanged(Mockito.any(GetTokenResult.class));
 
     reset(listener);
     firebaseApp.removeAuthStateListener(listener);
-    Tasks.await(firebaseApp.getToken(false));
+    firebaseApp.getToken(false);
     verify(listener, never()).onAuthStateChanged(Mockito.any(GetTokenResult.class));
   }
 
@@ -379,7 +378,7 @@ public class FirebaseAppTest {
     AuthStateListener listener = mock(AuthStateListener.class);
     firebaseApp.addAuthStateListener(listener);
 
-    Tasks.await(firebaseApp.getToken(true));
+    firebaseApp.getToken(true);
     verify(listener, times(1)).onAuthStateChanged(Mockito.any(GetTokenResult.class));
 
     tokenRefresher.simulateDelay(55);
@@ -405,9 +404,9 @@ public class FirebaseAppTest {
 
   private static class MockFirebaseCredential implements FirebaseCredential {
     @Override
-    public Task<GoogleOAuthAccessToken> getAccessToken() {
-      return Tasks.forResult(new GoogleOAuthAccessToken(UUID.randomUUID().toString(),
-          System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1)));
+    public GoogleOAuthAccessToken getAccessToken() {
+      return new GoogleOAuthAccessToken(UUID.randomUUID().toString(),
+          System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1));
     }
   }
 
@@ -420,9 +419,9 @@ public class FirebaseAppTest {
     }
 
     @Override
-    public Task<GoogleOAuthAccessToken> getAccessToken() {
-      return Tasks.forResult(new GoogleOAuthAccessToken(UUID.randomUUID().toString(),
-          clock.now() + TimeUnit.HOURS.toMillis(1)));
+    public GoogleOAuthAccessToken getAccessToken() {
+      return new GoogleOAuthAccessToken(UUID.randomUUID().toString(),
+          clock.now() + TimeUnit.HOURS.toMillis(1));
     }
   }
 

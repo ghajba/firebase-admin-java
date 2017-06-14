@@ -22,6 +22,7 @@ import com.google.firebase.internal.FirebaseService;
 import com.google.firebase.internal.GetTokenResult;
 import com.google.firebase.internal.NonNull;
 import com.google.firebase.tasks.Task;
+import java.io.IOException;
 
 /**
  * Provides trampolines into package-private APIs used by components of Firebase. Intentionally
@@ -60,8 +61,13 @@ public final class ImplFirebaseTrampolines {
     app.removeAuthStateListener(listener);
   }
 
-  public static Task<GetTokenResult> getToken(@NonNull FirebaseApp app, boolean forceRefresh) {
+  public static GetTokenResult getToken(@NonNull FirebaseApp app,
+      boolean forceRefresh) throws IOException {
     return app.getToken(forceRefresh);
+  }
+
+  public static Task<GetTokenResult> getTokenAsync(@NonNull FirebaseApp app, boolean forceRefresh) {
+    return app.getTokenAsync(forceRefresh);
   }
 
   public static <T extends FirebaseService> T getService(

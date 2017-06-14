@@ -48,22 +48,21 @@ public final class TestOnlyImplFirebaseAuthTrampolines {
   }
 
   /* FirebaseCredentials */
-  public static Task<GoogleCredential> getCertificate(FirebaseCredential credential) {
+  public static GoogleCredential getCertificate(
+      FirebaseCredential credential) throws FirebaseException {
     if (credential instanceof FirebaseCredentials.CertCredential) {
-      return ((FirebaseCredentials.CertCredential) credential).getCertificate();
+      try {
+        return ((FirebaseCredentials.CertCredential) credential).getCertificate();
+      } catch (IOException e) {
+        throw new FirebaseException("Failed to obtain base credential", e);
+      }
     } else {
-      return Tasks.forException(new FirebaseException("Cannot convert to CertCredential"));
+      throw new FirebaseException("Cannot convert to CertCredential");
     }
   }
 
   /* FirebaseCredentials */
-  public static Task<String> getProjectId(FirebaseCredential credential) {
+  public static String getProjectId(FirebaseCredential credential) {
     return ((FirebaseCredentials.CertCredential) credential).getProjectId();
-  }
-
-  /* FirebaseAuth */
-  public static FirebaseAuth getFirebaseAuthInstance(
-      FirebaseApp firebaseApp, GooglePublicKeysManager googlePublicKeysManager, Clock clock) {
-    return new FirebaseAuth(firebaseApp, googlePublicKeysManager, clock);
   }
 }

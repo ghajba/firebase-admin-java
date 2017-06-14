@@ -16,7 +16,7 @@
 
 package com.google.firebase.auth;
 
-import com.google.firebase.tasks.Task;
+import java.io.IOException;
 
 /**
  * Provides Google OAuth2 access tokens used to authenticate with Firebase services. In most cases,
@@ -31,7 +31,8 @@ public interface FirebaseCredential {
    * The caller is expected to implement caching by referencing the token expiry details
    * available in the returned GoogleOAuthAccessToken instance.
    *
-   * @return A {@link Task} providing a Google OAuth access token.
+   * @return A Google OAuth access token.
+   * @throws IOException If an error occurs while obtaining an access token.
    */
-  Task<GoogleOAuthAccessToken> getAccessToken();
+  GoogleOAuthAccessToken getAccessToken() throws IOException;
 }

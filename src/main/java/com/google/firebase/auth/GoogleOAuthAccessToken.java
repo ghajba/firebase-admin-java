@@ -57,4 +57,12 @@ public class GoogleOAuthAccessToken {
     return expiryTime;
   }
 
+  @Override
+  public boolean equals(Object obj) {
+    if (obj instanceof GoogleOAuthAccessToken) {
+      GoogleOAuthAccessToken other = (GoogleOAuthAccessToken) obj;
+      return this.accessToken.equals(other.accessToken) && this.expiryTime == other.expiryTime;
+    }
+    return false;
+  }
 }

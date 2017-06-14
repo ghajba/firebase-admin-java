@@ -53,8 +53,7 @@ public class FirebaseOptionsTest {
           .build();
 
   @Test
-  public void createOptionsWithAllValuesSet() throws IOException, InterruptedException {
-    final Semaphore semaphore = new Semaphore(0);
+  public void createOptionsWithAllValuesSet() throws IOException, FirebaseException {
     GsonFactory jsonFactory = new GsonFactory();
     NetHttpTransport httpTransport = new NetHttpTransport();
     FirebaseOptions firebaseOptions =
@@ -67,45 +66,25 @@ public class FirebaseOptionsTest {
     assertEquals(FIREBASE_DB_URL, firebaseOptions.getDatabaseUrl());
     assertSame(jsonFactory, firebaseOptions.getJsonFactory());
     assertSame(httpTransport, firebaseOptions.getHttpTransport());
-    TestOnlyImplFirebaseAuthTrampolines.getCertificate(firebaseOptions.getCredential())
-        .addOnSuccessListener(
-            new OnSuccessListener<GoogleCredential>() {
-              @Override
-              public void onSuccess(GoogleCredential googleCredential) {
-                assertEquals(
-                    ServiceAccount.EDITOR.getEmail(), googleCredential.getServiceAccountId());
-                semaphore.release();
-              }
-            });
-    TestHelpers.waitFor(semaphore);
+    GoogleCredential googleCredential = TestOnlyImplFirebaseAuthTrampolines.getCertificate(
+        firebaseOptions.getCredential());
+    assertEquals(
+        ServiceAccount.EDITOR.getEmail(), googleCredential.getServiceAccountId());
   }
 
   @Test
-  public void createOptionsWithOnlyMandatoryValuesSet() throws IOException, InterruptedException {
-    final Semaphore semaphore = new Semaphore(0);
+  public void createOptionsWithOnlyMandatoryValuesSet() throws IOException, FirebaseException {
     FirebaseOptions firebaseOptions =
         new FirebaseOptions.Builder()
             .setCredential(FirebaseCredentials.fromCertificate(ServiceAccount.EDITOR.asStream()))
             .build();
     assertNotNull(firebaseOptions.getJsonFactory());
     assertNotNull(firebaseOptions.getHttpTransport());
-    TestOnlyImplFirebaseAuthTrampolines.getCertificate(firebaseOptions.getCredential())
-        .addOnSuccessListener(
-            new OnSuccessListener<GoogleCredential>() {
-              @Override
-              public void onSuccess(GoogleCredential googleCredential) {
-                try {
-                  assertEquals(
-                      GoogleCredential.fromStream(ServiceAccount.EDITOR.asStream())
-                          .getServiceAccountId(),
-                      googleCredential.getServiceAccountId());
-                  semaphore.release();
-                } catch (IOException e) {
-                  fail();
-                }
-              }
-            });
-    TestHelpers.waitFor(semaphore);
+    GoogleCredential googleCredential = TestOnlyImplFirebaseAuthTrampolines.getCertificate(
+        firebaseOptions.getCredential());
+    assertEquals(
+        GoogleCredential.fromStream(ServiceAccount.EDITOR.asStream()).getServiceAccountId(),
+        googleCredential.getServiceAccountId());
   }
 
   @Test
@@ -114,9 +93,9 @@ public class FirebaseOptionsTest {
         new FirebaseOptions.Builder()
             .setCredential(FirebaseCredentials.fromCertificate(ServiceAccount.EDITOR.asStream()))
             .build();
-    Task<String> projectId =
+    String projectId =
         TestOnlyImplFirebaseAuthTrampolines.getProjectId(firebaseOptions.getCredential());
-    assertEquals("mock-project-id", Tasks.await(projectId));
+    assertEquals("mock-project-id", projectId);
   }
 
   @Test(expected = NullPointerException.class)

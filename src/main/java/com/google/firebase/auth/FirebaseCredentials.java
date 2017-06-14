@@ -25,9 +25,6 @@ import com.google.api.client.json.JsonFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.CharStreams;
 import com.google.firebase.internal.NonNull;
-import com.google.firebase.tasks.Continuation;
-import com.google.firebase.tasks.Task;
-import com.google.firebase.tasks.Tasks;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -35,7 +32,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.concurrent.Callable;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -195,7 +191,7 @@ public class FirebaseCredentials {
 
     final HttpTransport transport;
     final JsonFactory jsonFactory;
-    private GoogleCredential googleCredential;
+    private volatile GoogleCredential googleCredential;
 
     BaseCredential(HttpTransport transport, JsonFactory jsonFactory) {
       this.transport = checkNotNull(transport, "HttpTransport must not be null");
@@ -209,26 +205,15 @@ public class FirebaseCredentials {
      * Returns the associated GoogleCredential for this class. This implementation is cached by
      * default.
      */
-    final Task<GoogleCredential> getCertificate() {
-      synchronized (this) {
-        if (googleCredential != null) {
-          return Tasks.forResult(googleCredential);
+    final GoogleCredential getCertificate() throws IOException {
+      if (googleCredential == null) {
+        synchronized (this) {
+          if (googleCredential == null) {
+            googleCredential = fetchCredential();
+          }
         }
       }
-
-      return Tasks.call(
-          new Callable<GoogleCredential>() {
-            @Override
-            public GoogleCredential call() throws Exception {
-              // Retrieve a new credential. This is a network operation that can be repeated and is
-              // done outside of the lock.
-              GoogleCredential credential = fetchCredential();
-              synchronized (BaseCredential.this) {
-                googleCredential = credential;
-              }
-              return credential;
-            }
-          });
+      return googleCredential;
     }
 
     abstract GoogleOAuthAccessToken fetchToken(GoogleCredential credential) throws IOException;
@@ -237,15 +222,8 @@ public class FirebaseCredentials {
      * Returns an access token for this credential. Does not cache tokens.
      */
     @Override
-    public final Task<GoogleOAuthAccessToken> getAccessToken() {
-      return getCertificate()
-          .continueWith(new Continuation<GoogleCredential, GoogleOAuthAccessToken>() {
-            @Override
-            public GoogleOAuthAccessToken then(@NonNull Task<GoogleCredential> task)
-                throws Exception {
-              return fetchToken(task.getResult());
-            }
-          });
+    public final GoogleOAuthAccessToken getAccessToken() throws IOException {
+      return fetchToken(getCertificate());
     }
   }
 
@@ -287,8 +265,8 @@ public class FirebaseCredentials {
       return newAccessToken(credential);
     }
 
-    Task<String> getProjectId() {
-      return Tasks.forResult(projectId);
+    String getProjectId() {
+      return projectId;
     }
   }
 

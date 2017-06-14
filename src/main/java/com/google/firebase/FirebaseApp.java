@@ -36,9 +36,10 @@ import com.google.firebase.internal.GetTokenResult;
 import com.google.firebase.internal.Log;
 import com.google.firebase.internal.NonNull;
 import com.google.firebase.internal.Nullable;
-import com.google.firebase.tasks.Continuation;
 import com.google.firebase.tasks.Task;
 
+import com.google.firebase.tasks.Tasks;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -68,7 +69,6 @@ public class FirebaseApp {
   private static final Map<String, FirebaseApp> instances = new HashMap<>();
 
   public static final String DEFAULT_APP_NAME = "[DEFAULT]";
-  private static final long TOKEN_REFRESH_INTERVAL_MILLIS = TimeUnit.MINUTES.toMillis(55);
 
   static final TokenRefresher.Factory DEFAULT_TOKEN_REFRESHER_FACTORY =
       new TokenRefresher.Factory();
@@ -87,10 +87,7 @@ public class FirebaseApp {
 
   private final AtomicBoolean deleted = new AtomicBoolean();
   private final List<AuthStateListener> authStateListeners = new ArrayList<>();
-  private final AtomicReference<GetTokenResult> currentToken = new AtomicReference<>();
   private final Map<String, FirebaseService> services = new HashMap<>();
-
-  private Task<GoogleOAuthAccessToken> previousTokenTask;
 
   /**
    * Per application lock for synchronizing all internal FirebaseApp state changes.
@@ -314,11 +311,43 @@ public class FirebaseApp {
     checkState(!deleted.get(), "FirebaseApp was deleted %s", this);
   }
 
-  private boolean refreshRequired(
-      @NonNull Task<GoogleOAuthAccessToken> previousTask, boolean forceRefresh) {
-    return (previousTask.isComplete()
-        && (forceRefresh || !previousTask.isSuccessful()
-        || previousTask.getResult().getExpiryTime() <= clock.now()));
+  private boolean refreshRequired(GoogleOAuthAccessToken oldToken, boolean forceRefresh) {
+    return oldToken == null || forceRefresh || oldToken.getExpiryTime() <= clock.now();
+  }
+
+  private final AtomicReference<GoogleOAuthAccessToken> current = new AtomicReference<>();
+
+  GetTokenResult getToken(boolean forceRefresh) throws IOException {
+    GoogleOAuthAccessToken currentToken = current.get();
+    List<AuthStateListener> listenersCopy = null;
+    if (refreshRequired(currentToken, forceRefresh)) {
+      synchronized (lock) {
+        currentToken = current.get();
+        if (refreshRequired(currentToken, forceRefresh)) {
+          currentToken = options.getCredential().getAccessToken();
+          current.set(currentToken);
+          listenersCopy = ImmutableList.copyOf(authStateListeners);
+
+          long refreshDelay  = currentToken.getExpiryTime() - clock.now()
+              - TimeUnit.MINUTES.toMillis(5);
+          if (refreshDelay > 0) {
+            tokenRefresher.scheduleRefresh(refreshDelay);
+          } else {
+            Log.w("FirebaseApp", "Token expiry ("
+                + currentToken.getExpiryTime() + ") is less than 5 minutes in the "
+                + "future. Not scheduling a proactive refresh.");
+          }
+        }
+      }
+    }
+
+    GetTokenResult result = new GetTokenResult(currentToken.getAccessToken());
+    if (listenersCopy != null) {
+      for (AuthStateListener listener : listenersCopy) {
+        listener.onAuthStateChanged(result);
+      }
+    }
+    return result;
   }
 
   /**
@@ -328,55 +357,13 @@ public class FirebaseApp {
    *     token is invalidated out of band.
    * @return a {@link Task}
    */
-  Task<GetTokenResult> getToken(boolean forceRefresh) {
-    synchronized (lock) {
-      checkNotDeleted();
-      if (previousTokenTask == null || refreshRequired(previousTokenTask, forceRefresh)) {
-        previousTokenTask = options.getCredential().getAccessToken();
+  Task<GetTokenResult> getTokenAsync(final boolean forceRefresh) {
+    return Tasks.call(new Callable<GetTokenResult>() {
+      @Override
+      public GetTokenResult call() throws Exception {
+        return getToken(forceRefresh);
       }
-
-      return previousTokenTask.continueWith(
-          new Continuation<GoogleOAuthAccessToken, GetTokenResult>() {
-            @Override
-            public GetTokenResult then(@NonNull Task<GoogleOAuthAccessToken> task)
-                throws Exception {
-              GoogleOAuthAccessToken googleOAuthToken = task.getResult();
-              GetTokenResult newToken = new GetTokenResult(googleOAuthToken.getAccessToken());
-              GetTokenResult oldToken = currentToken.get();
-              List<AuthStateListener> listenersCopy = null;
-              if (!newToken.equals(oldToken)) {
-                synchronized (lock) {
-                  if (deleted.get()) {
-                    return newToken;
-                  }
-
-                  // Grab the lock before compareAndSet to avoid a potential race
-                  // condition with addAuthStateListener. The same lock also ensures serial
-                  // access to the token refresher.
-                  if (currentToken.compareAndSet(oldToken, newToken)) {
-                    listenersCopy = ImmutableList.copyOf(authStateListeners);
-                    long refreshDelay  = googleOAuthToken.getExpiryTime() - clock.now()
-                        - TimeUnit.MINUTES.toMillis(5);
-                    if (refreshDelay > 0) {
-                      tokenRefresher.scheduleRefresh(refreshDelay);
-                    } else {
-                      Log.w("FirebaseApp", "Token expiry ("
-                          + googleOAuthToken.getExpiryTime() + ") is less than 5 minutes in the "
-                          + "future. Not scheduling a proactive refresh.");
-                    }
-                  }
-                }
-              }
-
-              if (listenersCopy != null) {
-                for (AuthStateListener listener : listenersCopy) {
-                  listener.onAuthStateChanged(newToken);
-                }
-              }
-              return newToken;
-            }
-          });
-    }
+    });
   }
 
   boolean isDefaultApp() {
@@ -384,17 +371,17 @@ public class FirebaseApp {
   }
 
   void addAuthStateListener(@NonNull final AuthStateListener listener) {
-    GetTokenResult currentToken;
+    GoogleOAuthAccessToken currentToken;
     synchronized (lock) {
       checkNotDeleted();
       authStateListeners.add(checkNotNull(listener));
-      currentToken = this.currentToken.get();
+      currentToken = this.current.get();
     }
 
     if (currentToken != null) {
       // Task has copied the authStateListeners before the listener was added.
       // Notify this listener explicitly.
-      listener.onAuthStateChanged(currentToken);
+      listener.onAuthStateChanged(new GetTokenResult(currentToken.getAccessToken()));
     }
   }
 
@@ -446,7 +433,7 @@ public class FirebaseApp {
           new Callable<Task<GetTokenResult>>() {
             @Override
             public Task<GetTokenResult> call() throws Exception {
-              return firebaseApp.getToken(true);
+              return firebaseApp.getTokenAsync(true);
             }
           },
           delayMillis);

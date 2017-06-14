@@ -160,10 +160,9 @@ public class IntegrationTestUtils {
     private String getToken() {
       // TODO: We should consider exposing getToken (or similar) publicly for the
       // purpose of servers doing authenticated REST requests like this.
-      Task<GetTokenResult> task = TestOnlyImplFirebaseTrampolines.getToken(app, false);
       try {
-        return Tasks.await(task).getToken();
-      } catch (ExecutionException | InterruptedException e) {
+        return TestOnlyImplFirebaseTrampolines.getToken(app, false).getToken();
+      } catch (IOException e) {
         throw new RuntimeException(e);
       }
     }

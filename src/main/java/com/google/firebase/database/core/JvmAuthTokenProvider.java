@@ -54,7 +54,7 @@ public class JvmAuthTokenProvider implements AuthTokenProvider {
 
   @Override
   public void getToken(boolean forceRefresh, final GetTokenCompletionListener listener) {
-    ImplFirebaseTrampolines.getToken(firebaseApp, forceRefresh)
+    ImplFirebaseTrampolines.getTokenAsync(firebaseApp, forceRefresh)
         .addOnCompleteListener(
             this.executorService,
             new OnCompleteListener<GetTokenResult>() {
