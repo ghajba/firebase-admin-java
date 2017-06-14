@@ -20,6 +20,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.auth.FirebaseCredentials;
@@ -29,8 +31,6 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.TestHelpers;
 import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.tasks.OnCompleteListener;
-import com.google.firebase.tasks.Task;
 import com.google.firebase.testing.IntegrationTestUtils;
 import com.google.firebase.testing.IntegrationTestUtils.AppHttpClient;
 import com.google.firebase.testing.IntegrationTestUtils.ResponseInfo;
@@ -42,6 +42,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.annotation.Nullable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -156,16 +157,21 @@ public class FirebaseDatabaseAuthTestIT {
       DatabaseReference ref, final boolean shouldSucceed, final boolean shouldTimeout)
       throws InterruptedException {
     final CountDownLatch lock = new CountDownLatch(1);
-    final AtomicBoolean success = new AtomicBoolean(false); 
-    ref.setValue("wrote something")
-        .addOnCompleteListener(
-            new OnCompleteListener<Void>() {
-              @Override
-              public void onComplete(Task<Void> task) {
-                success.compareAndSet(false, task.isSuccessful());
-                lock.countDown();                
-              }
-            });
+    final AtomicBoolean success = new AtomicBoolean(false);
+    Futures.addCallback(ref.setValue("wrote something"), new FutureCallback<Void>() {
+      @Override
+      public void onSuccess(@Nullable Void result) {
+        success.compareAndSet(false, true);
+        lock.countDown();
+      }
+
+      @Override
+      public void onFailure(Throwable t) {
+        success.compareAndSet(false, false);
+        lock.countDown();
+      }
+    });
+
     boolean finished = lock.await(TestUtils.TEST_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     if (shouldTimeout) {
       assertTrue("Write finished (expected to timeout).", !finished);

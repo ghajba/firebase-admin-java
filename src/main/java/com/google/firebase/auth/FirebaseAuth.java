@@ -20,10 +20,10 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.Strings;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.UserRecord.CreateRequest;
 import com.google.firebase.auth.UserRecord.UpdateRequest;
-import com.google.firebase.tasks.Task;
 import com.google.firebase.tasks.Tasks;
 
 import java.util.Map;
@@ -94,10 +94,10 @@ public class FirebaseAuth {
    *
    * @param uid The UID to store in the token. This identifies the user to other Firebase services
    *     (Firebase Database, Firebase Auth, etc.)
-   * @return A {@link Task} which will complete successfully with the created Firebase Custom Token,
-   *     or unsuccessfully with the failure Exception.
+   * @return A {@link ListenableFuture} which will complete successfully with the created Firebase
+   *     Custom Token, or unsuccessfully with the failure Exception.
    */
-  public Task<String> createCustomToken(final String uid) {
+  public ListenableFuture<String> createCustomToken(final String uid) {
     return Tasks.call(new Callable<String>() {
       @Override
       public String call() throws Exception {
@@ -116,10 +116,10 @@ public class FirebaseAuth {
    * @param developerClaims Additional claims to be stored in the token (and made available to
    *     security rules in Database, Storage, etc.). These must be able to be serialized to JSON
    *     (e.g. contain only Maps, Arrays, Strings, Booleans, Numbers, etc.)
-   * @return A {@link Task} which will complete successfully with the created Firebase Custom Token,
-   *     or unsuccessfully with the failure Exception.
+   * @return A {@link ListenableFuture} which will complete successfully with the created Firebase
+   *     Custom Token, or unsuccessfully with the failure Exception.
    */
-  public Task<String> createCustomToken(
+  public ListenableFuture<String> createCustomToken(
       final String uid, final Map<String, Object> developerClaims) {
     return Tasks.call(new Callable<String>() {
       @Override
@@ -141,15 +141,16 @@ public class FirebaseAuth {
    * associated with this FirebaseAuth instance (which by default is extracted from your service
    * account)
    *
-   * <p>If the token is valid, the returned {@link Task} will complete successfully and provide a
-   * parsed version of the token from which the UID and other claims in the token can be inspected.
-   * If the token is invalid, the Task will fail with an exception indicating the failure.
+   * <p>If the token is valid, the returned {@link ListenableFuture} will complete successfully and
+   * provide a parsed version of the token from which the UID and other claims in the token can be
+   * inspected. If the token is invalid, the  will fail with an exception indicating the
+   * failure.
    *
    * @param token A Firebase ID Token to verify and parse.
-   * @return A {@link Task} which will complete successfully with the parsed token, or
+   * @return A {@link ListenableFuture} which will complete successfully with the parsed token, or
    *     unsuccessfully with the failure Exception.
    */
-  public Task<FirebaseToken> verifyIdToken(final String token) {
+  public ListenableFuture<FirebaseToken> verifyIdToken(final String token) {
     return Tasks.call(new Callable<FirebaseToken>() {
       @Override
       public FirebaseToken call() throws Exception {
@@ -162,12 +163,12 @@ public class FirebaseAuth {
    * Gets the user data corresponding to the specified user ID.
    *
    * @param uid A user ID string.
-   * @return A {@link Task} which will complete successfully with a {@link UserRecord} instance.
-   *     If an error occurs while retrieving user data or if the specified user ID does not exist,
-   *     the task fails with a FirebaseAuthException.
+   * @return A {@link ListenableFuture} which will complete successfully with a {@link UserRecord}
+   *     instance. If an error occurs while retrieving user data or if the specified user ID does
+   *     not exist, the future fails with a FirebaseAuthException.
    * @throws IllegalArgumentException If the user ID string is null or empty.
    */
-  public Task<UserRecord> getUser(final String uid) {
+  public ListenableFuture<UserRecord> getUser(final String uid) {
     checkArgument(!Strings.isNullOrEmpty(uid), "uid must not be null or empty");
     return Tasks.call(new Callable<UserRecord>() {
       @Override
@@ -181,12 +182,12 @@ public class FirebaseAuth {
    * Gets the user data corresponding to the specified user email.
    *
    * @param email A user email address string.
-   * @return A {@link Task} which will complete successfully with a {@link UserRecord} instance.
-   *     If an error occurs while retrieving user data or if the email address does not correspond
-   *     to a user, the task fails with a FirebaseAuthException.
+   * @return A {@link ListenableFuture} which will complete successfully with a {@link UserRecord}
+   *     instance. If an error occurs while retrieving user data or if the email address does not
+   *     correspond to a user, the future fails with a FirebaseAuthException.
    * @throws IllegalArgumentException If the email is null or empty.
    */
-  public Task<UserRecord> getUserByEmail(final String email) {
+  public ListenableFuture<UserRecord> getUserByEmail(final String email) {
     checkArgument(!Strings.isNullOrEmpty(email), "email must not be null or empty");
     return Tasks.call(new Callable<UserRecord>() {
       @Override
@@ -201,12 +202,12 @@ public class FirebaseAuth {
    * {@link CreateRequest}.
    *
    * @param request A non-null {@link CreateRequest} instance.
-   * @return A {@link Task} which will complete successfully with a {@link UserRecord} instance
-   *     corresponding to the newly created account. If an error occurs while creating the user
-   *     account, the task fails with a FirebaseAuthException.
+   * @return A {@link ListenableFuture} which will complete successfully with a {@link UserRecord}
+   *     instance corresponding to the newly created account. If an error occurs while creating the
+   *     user account, the future fails with a FirebaseAuthException.
    * @throws NullPointerException if the provided request is null.
    */
-  public Task<UserRecord> createUser(final CreateRequest request) {
+  public ListenableFuture<UserRecord> createUser(final CreateRequest request) {
     checkNotNull(request, "create request must not be null");
     return Tasks.call(new Callable<UserRecord>() {
       @Override
@@ -221,12 +222,12 @@ public class FirebaseAuth {
    * {@link UpdateRequest}.
    *
    * @param request A non-null {@link UpdateRequest} instance.
-   * @return A {@link Task} which will complete successfully with a {@link UserRecord} instance
-   *     corresponding to the updated user account. If an error occurs while updating the user
-   *     account, the task fails with a FirebaseAuthException.
+   * @return A {@link ListenableFuture} which will complete successfully with a {@link UserRecord}
+   *     instance corresponding to the updated user account. If an error occurs while updating the
+   *     user account, the future fails with a FirebaseAuthException.
    * @throws NullPointerException if the provided update request is null.
    */
-  public Task<UserRecord> updateUser(final UpdateRequest request) {
+  public ListenableFuture<UserRecord> updateUser(final UpdateRequest request) {
     checkNotNull(request, "update request must not be null");
     return Tasks.call(new Callable<UserRecord>() {
       @Override
@@ -240,12 +241,12 @@ public class FirebaseAuth {
    * Deletes the user identified by the specified user ID.
    *
    * @param uid A user ID string.
-   * @return A {@link Task} which will complete successfully when the specified user account has
-   *     been deleted. If an error occurs while deleting the user account, the task fails with a
-   *     FirebaseAuthException.
+   * @return A {@link ListenableFuture} which will complete successfully when the specified user
+   *     account has been deleted. If an error occurs while deleting the user account, the future
+   *     fails with a FirebaseAuthException.
    * @throws IllegalArgumentException If the user ID string is null or empty.
    */
-  public Task<Void> deleteUser(final String uid) {
+  public ListenableFuture<Void> deleteUser(final String uid) {
     checkArgument(!Strings.isNullOrEmpty(uid), "uid must not be null or empty");
     return Tasks.call(new Callable<Void>() {
       @Override

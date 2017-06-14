@@ -31,6 +31,7 @@ import static org.mockito.Mockito.verify;
 
 import com.google.common.base.Defaults;
 import com.google.common.io.BaseEncoding;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.FirebaseApp.TokenRefresher;
 import com.google.firebase.FirebaseOptions.Builder;
 import com.google.firebase.auth.FirebaseCredential;
@@ -39,9 +40,6 @@ import com.google.firebase.auth.GoogleOAuthAccessToken;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.internal.AuthStateListener;
 import com.google.firebase.internal.GetTokenResult;
-import com.google.firebase.tasks.Task;
-import com.google.firebase.tasks.TaskCompletionSource;
-import com.google.firebase.tasks.Tasks;
 import com.google.firebase.testing.FirebaseAppRule;
 import com.google.firebase.testing.ServiceAccount;
 import com.google.firebase.testing.TestUtils;
@@ -55,6 +53,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
@@ -313,17 +312,16 @@ public class FirebaseAppTest {
   public void testAuthStateListenerAddWithInitialToken() throws Exception {
     FirebaseApp firebaseApp = FirebaseApp.initializeApp(MOCK_CREDENTIAL_OPTIONS, "myApp");
     firebaseApp.getToken(true);
-    final TaskCompletionSource<Boolean> completionSource = new TaskCompletionSource<>();
+    final CountDownLatch latch = new CountDownLatch(1);
     AuthStateListener listener =
         new AuthStateListener() {
           @Override
           public void onAuthStateChanged(GetTokenResult tokenResult) {
-            completionSource.setResult(true);
+            latch.countDown();
           }
         };
     firebaseApp.addAuthStateListener(listener);
-    Tasks.await(completionSource.getTask());
-    assertTrue(completionSource.getTask().isSuccessful());
+    latch.await();
   }
 
   @Test
@@ -427,7 +425,7 @@ public class FirebaseAppTest {
 
   private static class MockTokenRefresher extends TokenRefresher {
 
-    private Callable<Task<GetTokenResult>> task;
+    private Callable<ListenableFuture<GetTokenResult>> task;
     private long executeAt;
     private long time;
 
@@ -441,7 +439,7 @@ public class FirebaseAppTest {
     }
 
     @Override
-    protected void scheduleNext(Callable<Task<GetTokenResult>> task, long delayMillis) {
+    protected void scheduleNext(Callable<ListenableFuture<GetTokenResult>> task, long delayMillis) {
       this.task = task;
       executeAt = time + delayMillis;
     }
@@ -453,7 +451,7 @@ public class FirebaseAppTest {
      * @param delayMinutes Duration in minutes to advance the clock by
      */
     void simulateDelay(int delayMinutes) throws Exception {
-      Task<GetTokenResult> refreshTask = null;
+      ListenableFuture<GetTokenResult> refreshTask = null;
       synchronized (this) {
         time += TimeUnit.MINUTES.toMillis(delayMinutes);
         if (task != null && time >= executeAt) {
@@ -462,7 +460,7 @@ public class FirebaseAppTest {
       }
 
       if (refreshTask != null) {
-        Tasks.await(refreshTask);
+        refreshTask.get();
       }
     }
   }

@@ -17,13 +17,13 @@
 package com.google.firebase.database.utilities;
 
 import com.google.common.io.BaseEncoding;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseException;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.core.Path;
 import com.google.firebase.database.core.RepoInfo;
-import com.google.firebase.tasks.Task;
-import com.google.firebase.tasks.TaskCompletionSource;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -237,10 +237,10 @@ public class Utilities {
     }
   }
 
-  public static Pair<Task<Void>, DatabaseReference.CompletionListener> wrapOnComplete(
+  public static Pair<ListenableFuture<Void>, DatabaseReference.CompletionListener> wrapOnComplete(
       DatabaseReference.CompletionListener optListener) {
     if (optListener == null) {
-      final TaskCompletionSource<Void> source = new TaskCompletionSource<>();
+      final SettableFuture<Void> source = SettableFuture.create();
       DatabaseReference.CompletionListener listener =
           new DatabaseReference.CompletionListener() {
             @Override
@@ -248,11 +248,11 @@ public class Utilities {
               if (error != null) {
                 source.setException(error.toException());
               } else {
-                source.setResult(null);
+                source.set(null);
               }
             }
           };
-      return new Pair<>(source.getTask(), listener);
+      return new Pair<>((ListenableFuture<Void>) source, listener);
     } else {
       // If a listener is supplied we do not want to create a Task
       return new Pair<>(null, optListener);

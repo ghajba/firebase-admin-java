@@ -16,6 +16,9 @@
 
 package com.google.firebase.tasks;
 
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.firebase.internal.GaeThreadFactory;
 import com.google.firebase.internal.NonNull;
 
@@ -28,21 +31,17 @@ import java.util.concurrent.Executors;
 public class TaskExecutors {
 
   /** An Executor that uses a shared cached thread pool. */
-  public static final Executor DEFAULT_THREAD_POOL;
+  public static final ListeningExecutorService DEFAULT_THREAD_POOL;
   /** An Executor that uses the calling thread. */
-  static final Executor DIRECT =
-      new Executor() {
-        @Override
-        public void execute(@NonNull Runnable command) {
-          command.run();
-        }
-      };
+  static final ListeningExecutorService DIRECT = MoreExecutors.listeningDecorator(
+      MoreExecutors.newDirectExecutorService());
 
   static {
     if (GaeThreadFactory.isAvailable()) {
-      DEFAULT_THREAD_POOL = GaeThreadFactory.DEFAULT_EXECUTOR;
+      DEFAULT_THREAD_POOL = MoreExecutors.listeningDecorator(GaeThreadFactory.DEFAULT_EXECUTOR);
     } else {
-      DEFAULT_THREAD_POOL = Executors.newCachedThreadPool(Executors.defaultThreadFactory());
+      DEFAULT_THREAD_POOL = MoreExecutors.listeningDecorator(
+          Executors.newCachedThreadPool(Executors.defaultThreadFactory()));
     }
   }
 

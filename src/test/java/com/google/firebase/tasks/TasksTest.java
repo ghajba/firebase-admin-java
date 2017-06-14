@@ -22,6 +22,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import java.rmi.RemoteException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -41,32 +42,8 @@ public class TasksTest {
   private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
   @Test
-  public void testForResult() throws Exception {
-    Task<Object> task = Tasks.forResult(RESULT);
-    assertEquals(RESULT, task.getResult());
-  }
-
-  @Test
-  public void testForResult_nullResult() throws Exception {
-    Task<Void> task = Tasks.forResult(null);
-    assertNull(task.getResult());
-  }
-
-  @Test
-  public void testForException() {
-    Task<Void> task = Tasks.forException(EXCEPTION);
-    assertEquals(EXCEPTION, task.getException());
-  }
-
-  @Test(expected = NullPointerException.class)
-  @SuppressWarnings("ConstantConditions")
-  public void testForException_nullException() {
-    Tasks.forException(null);
-  }
-
-  @Test
-  public void testCall_nonNullResult() {
-    Task<Object> task =
+  public void testCall_nonNullResult() throws Exception {
+    ListenableFuture<Object> task =
         Tasks.call(
             TaskExecutors.DIRECT,
             new Callable<Object>() {
@@ -75,12 +52,12 @@ public class TasksTest {
                 return RESULT;
               }
             });
-    assertEquals(RESULT, task.getResult());
+    assertEquals(RESULT, task.get());
   }
 
   @Test
-  public void testCall_nullResult() {
-    Task<Void> task =
+  public void testCall_nullResult() throws Exception {
+    ListenableFuture<Void> task =
         Tasks.call(
             TaskExecutors.DIRECT,
             new Callable<Void>() {
@@ -89,12 +66,12 @@ public class TasksTest {
                 return null;
               }
             });
-    assertNull(task.getResult());
+    assertNull(task.get());
   }
 
   @Test
-  public void testCall_exception() {
-    Task<Void> task =
+  public void testCall_exception() throws Exception {
+    ListenableFuture<Void> task =
         Tasks.call(
             TaskExecutors.DIRECT,
             new Callable<Void>() {
@@ -103,7 +80,12 @@ public class TasksTest {
                 throw EXCEPTION;
               }
             });
-    assertEquals(EXCEPTION, task.getException());
+    try {
+      task.get();
+      fail("No error thrown");
+    } catch (ExecutionException e) {
+      assertEquals(EXCEPTION, e.getCause());
+    }
   }
 
   @Test(expected = NullPointerException.class)
@@ -121,195 +103,5 @@ public class TasksTest {
             return null;
           }
         });
-  }
-
-  @Test
-  public void testAwait() throws Exception {
-    TaskCompletionSource<Object> completionSource = new TaskCompletionSource<>();
-    scheduleResult(completionSource);
-    assertEquals(
-        RESULT, Tasks.await(completionSource.getTask(), TIMEOUT_MS, TimeUnit.MILLISECONDS));
-  }
-
-  @Test
-  public void testAwait_noTimeout() throws Exception {
-    TaskCompletionSource<Object> completionSource = new TaskCompletionSource<>();
-    scheduleResult(completionSource);
-    assertEquals(RESULT, Tasks.await(completionSource.getTask()));
-  }
-
-  @Test
-  public void testAwait_exception() throws Exception {
-    TaskCompletionSource<Void> completionSource = new TaskCompletionSource<>();
-    scheduleException(completionSource);
-
-    try {
-      Tasks.await(completionSource.getTask(), TIMEOUT_MS, TimeUnit.MILLISECONDS);
-      fail("No exception thrown");
-    } catch (ExecutionException e) {
-      assertSame(EXCEPTION, e.getCause());
-    }
-  }
-
-  @Test
-  public void testAwait_noTimeoutException() throws Exception {
-    TaskCompletionSource<Void> completionSource = new TaskCompletionSource<>();
-    scheduleException(completionSource);
-
-    try {
-      Tasks.await(completionSource.getTask());
-      fail("No exception thrown");
-    } catch (ExecutionException e) {
-      assertSame(EXCEPTION, e.getCause());
-    }
-  }
-
-  @Test
-  public void testAwait_alreadyFailed() throws Exception {
-    Task<Object> task = Tasks.forException(EXCEPTION);
-
-    try {
-      Tasks.await(task, TIMEOUT_MS, TimeUnit.MILLISECONDS);
-      fail("No exception thrown");
-    } catch (ExecutionException e) {
-      assertSame(EXCEPTION, e.getCause());
-    }
-  }
-
-  @Test
-  public void testAwait_noTimeoutAlreadyFailed() throws Exception {
-    Task<Object> task = Tasks.forException(EXCEPTION);
-
-    try {
-      Tasks.await(task);
-      fail("No exception thrown");
-    } catch (ExecutionException e) {
-      assertSame(EXCEPTION, e.getCause());
-    }
-  }
-
-  @Test
-  public void testAwait_alreadySucceeded() throws Exception {
-    Task<Object> task = Tasks.forResult(RESULT);
-    assertEquals(RESULT, Tasks.await(task, TIMEOUT_MS, TimeUnit.MILLISECONDS));
-  }
-
-  @Test
-  public void testAwait_noTimeoutAlreadySucceeded() throws Exception {
-    Task<Object> task = Tasks.forResult(RESULT);
-    assertEquals(RESULT, Tasks.await(task));
-  }
-
-  @Test(expected = InterruptedException.class)
-  public void testAwait_interrupted() throws Exception {
-    Task<Void> task = new TaskImpl<>();
-    scheduleInterrupt();
-    Tasks.await(task, TIMEOUT_MS, TimeUnit.MILLISECONDS);
-  }
-
-  @Test(expected = InterruptedException.class)
-  public void testAwait_noTimeoutInterrupted() throws Exception {
-    Task<Void> task = new TaskImpl<>();
-    scheduleInterrupt();
-    Tasks.await(task);
-  }
-
-  @Test(expected = TimeoutException.class)
-  public void testAwait_timeout() throws Exception {
-    TaskImpl<Void> task = new TaskImpl<>();
-    Tasks.await(task, TIMEOUT_MS, TimeUnit.MILLISECONDS);
-  }
-
-  @Test(expected = TimeoutException.class)
-  public void testWhenAll_notCompleted() throws Exception {
-    Task<Void> task1 = new TaskImpl<>();
-    Task<Void> task2 = new TaskImpl<>();
-    Task<Void> task = Tasks.whenAll(task1, task2);
-    Tasks.await(task, TIMEOUT_MS, TimeUnit.MILLISECONDS);
-  }
-
-  @Test(expected = TimeoutException.class)
-  public void testWhenAll_partiallyCompleted() throws Exception {
-    Task<Object> task1 = Tasks.forResult(RESULT);
-    Task<Void> task2 = new TaskImpl<>();
-    Task<Void> task = Tasks.whenAll(task1, task2);
-    Tasks.await(task, TIMEOUT_MS, TimeUnit.MILLISECONDS);
-  }
-
-  @Test
-  public void testWhenAll_completedFailure() throws Exception {
-    Task<Object> task1 = Tasks.forResult(RESULT);
-    Task<Object> task2 = Tasks.forException(EXCEPTION);
-    Task<Void> task = Tasks.whenAll(task1, task2);
-
-    try {
-      Tasks.await(task);
-      fail("No exception thrown");
-    } catch (ExecutionException e) {
-      assertTrue(e.getCause() instanceof ExecutionException);
-    }
-  }
-
-  @Test
-  public void testWhenAll_completedSuccess() throws Exception {
-    Task<Object> task1 = Tasks.forResult(RESULT);
-    Task<Object> task2 = Tasks.forResult(RESULT);
-    Task<Void> task = Tasks.whenAll(task1, task2);
-    assertNull(Tasks.await(task));
-  }
-
-  @Test
-  public void testWhenAll_completedEmpty() throws Exception {
-    Task<Void> task = Tasks.whenAll();
-    assertNull(Tasks.await(task));
-  }
-
-  @Test(expected = NullPointerException.class)
-  public void testWhenAll_nullOnInput() throws Exception {
-    Task<Object> task = Tasks.forResult(RESULT);
-    Tasks.whenAll(task, null, task);
-  }
-
-  private void scheduleResult(final TaskCompletionSource<Object> completionSource) {
-    @SuppressWarnings("unused")
-    Future<?> possiblyIgnoredError =
-        executor.schedule(
-            new Runnable() {
-              @Override
-              public void run() {
-                completionSource.setResult(RESULT);
-              }
-            },
-            SCHEDULE_DELAY_MS,
-            TimeUnit.MILLISECONDS);
-  }
-
-  private void scheduleException(final TaskCompletionSource<?> completionSource) {
-    @SuppressWarnings("unused")
-    Future<?> possiblyIgnoredError =
-        executor.schedule(
-            new Runnable() {
-              @Override
-              public void run() {
-                completionSource.setException(EXCEPTION);
-              }
-            },
-            SCHEDULE_DELAY_MS,
-            TimeUnit.MILLISECONDS);
-  }
-
-  private void scheduleInterrupt() {
-    final Thread testThread = Thread.currentThread();
-    @SuppressWarnings("unused")
-    Future<?> possiblyIgnoredError =
-        executor.schedule(
-            new Runnable() {
-              @Override
-              public void run() {
-                testThread.interrupt();
-              }
-            },
-            SCHEDULE_DELAY_MS,
-            TimeUnit.MILLISECONDS);
   }
 }

@@ -33,7 +33,6 @@ import com.google.firebase.database.TestFailure;
 import com.google.firebase.database.TestHelpers;
 import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.database.future.ReadFuture;
-import com.google.firebase.tasks.Tasks;
 import com.google.firebase.testing.IntegrationTestUtils;
 import com.google.firebase.testing.TestUtils;
 
@@ -165,8 +164,7 @@ public class FirebaseDatabaseTestIT {
       TestFailure {
     FirebaseDatabase db = FirebaseDatabase.getInstance(masterApp);
     DatabaseReference ref = db.getReference("testSetValue");
-    Tasks.await(ref.setValue("foo"), TestUtils.TEST_TIMEOUT_MILLIS,
-        TimeUnit.MILLISECONDS);
+    ref.setValue("foo").get(TestUtils.TEST_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     ReadFuture readFuture = ReadFuture.untilEquals(ref, "foo");
     readFuture.timedWait();
   }

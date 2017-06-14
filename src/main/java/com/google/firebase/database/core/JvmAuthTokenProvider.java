@@ -18,17 +18,17 @@ package com.google.firebase.database.core;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.ImplFirebaseTrampolines;
 import com.google.firebase.database.util.GAuthToken;
 import com.google.firebase.internal.AuthStateListener;
 import com.google.firebase.internal.GetTokenResult;
-import com.google.firebase.internal.NonNull;
-import com.google.firebase.tasks.OnCompleteListener;
-import com.google.firebase.tasks.Task;
 
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
+import javax.annotation.Nullable;
 
 public class JvmAuthTokenProvider implements AuthTokenProvider {
 
@@ -54,19 +54,18 @@ public class JvmAuthTokenProvider implements AuthTokenProvider {
 
   @Override
   public void getToken(boolean forceRefresh, final GetTokenCompletionListener listener) {
-    ImplFirebaseTrampolines.getTokenAsync(firebaseApp, forceRefresh)
-        .addOnCompleteListener(
-            this.executorService,
-            new OnCompleteListener<GetTokenResult>() {
-              @Override
-              public void onComplete(@NonNull Task<GetTokenResult> task) {
-                if (task.isSuccessful()) {
-                  listener.onSuccess(wrapOAuthToken(firebaseApp, task.getResult()));
-                } else {
-                  listener.onError(task.getException().toString());
-                }
-              }
-            });
+    Futures.addCallback(ImplFirebaseTrampolines.getTokenAsync(firebaseApp, forceRefresh),
+        new FutureCallback<GetTokenResult>() {
+          @Override
+          public void onSuccess(@Nullable GetTokenResult result) {
+            listener.onSuccess(wrapOAuthToken(firebaseApp, result));
+          }
+
+          @Override
+          public void onFailure(Throwable t) {
+            listener.onError(t.toString());
+          }
+        });
   }
 
   @Override

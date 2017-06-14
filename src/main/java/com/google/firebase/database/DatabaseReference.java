@@ -16,6 +16,7 @@
 
 package com.google.firebase.database;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.database.core.CompoundWrite;
 import com.google.firebase.database.core.DatabaseConfig;
 import com.google.firebase.database.core.Path;
@@ -32,7 +33,6 @@ import com.google.firebase.database.utilities.PushIdGenerator;
 import com.google.firebase.database.utilities.Utilities;
 import com.google.firebase.database.utilities.Validation;
 import com.google.firebase.database.utilities.encoding.CustomClassMapper;
-import com.google.firebase.tasks.Task;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -172,9 +172,9 @@ public class DatabaseReference extends Query {
    * <code>Map&lt;String, MyPOJO&gt;</code>, as well as null values.
    *
    * @param value The value to set at this location
-   * @return The {@link Task} for this operation.
+   * @return The ListenableFuture for this operation.
    */
-  public Task<Void> setValue(Object value) {
+  public ListenableFuture<Void> setValue(Object value) {
     return setValueInternal(value, PriorityUtilities.parsePriority(null), null);
   }
 
@@ -212,9 +212,9 @@ public class DatabaseReference extends Query {
    *
    * @param value The value to set at this location
    * @param priority The priority to set at this location
-   * @return The {@link Task} for this operation.
+   * @return The ListenableFuture for this operation.
    */
-  public Task<Void> setValue(Object value, Object priority) {
+  public ListenableFuture<Void> setValue(Object value, Object priority) {
     return setValueInternal(value, PriorityUtilities.parsePriority(priority), null);
   }
 
@@ -294,13 +294,15 @@ public class DatabaseReference extends Query {
 
   // Update
 
-  private Task<Void> setValueInternal(Object value, Node priority, CompletionListener optListener) {
+  private ListenableFuture<Void> setValueInternal(Object value, Node priority,
+      CompletionListener optListener) {
     Validation.validateWritablePath(getPath());
     ValidationPath.validateWithObject(getPath(), value);
     Object bouncedValue = CustomClassMapper.convertToPlainJavaTypes(value);
     Validation.validateWritableObject(bouncedValue);
     final Node node = NodeUtilities.NodeFromJSON(bouncedValue, priority);
-    final Pair<Task<Void>, CompletionListener> wrapped = Utilities.wrapOnComplete(optListener);
+    final Pair<ListenableFuture<Void>, CompletionListener> wrapped =
+        Utilities.wrapOnComplete(optListener);
     repo.scheduleNow(
         new Runnable() {
           @Override
@@ -338,9 +340,9 @@ public class DatabaseReference extends Query {
    * they can be parsed as a 32-bit integer.
    *
    * @param priority The priority to set at the specified location.
-   * @return The {@link Task} for this operation.
+   * @return The ListenableFuture for this operation.
    */
-  public Task<Void> setPriority(Object priority) {
+  public ListenableFuture<Void> setPriority(Object priority) {
     return setPriorityInternal(PriorityUtilities.parsePriority(priority), null);
   }
 
@@ -379,10 +381,12 @@ public class DatabaseReference extends Query {
 
   // Remove
 
-  private Task<Void> setPriorityInternal(final Node priority, CompletionListener optListener) {
+  private ListenableFuture<Void> setPriorityInternal(final Node priority,
+      CompletionListener optListener) {
     Validation.validateWritablePath(getPath());
 
-    final Pair<Task<Void>, CompletionListener> wrapped = Utilities.wrapOnComplete(optListener);
+    final Pair<ListenableFuture<Void>, CompletionListener> wrapped =
+        Utilities.wrapOnComplete(optListener);
     repo.scheduleNow(
         new Runnable() {
           @Override
@@ -399,9 +403,9 @@ public class DatabaseReference extends Query {
    * updateChildren() will remove the value at the specified location.
    *
    * @param update The paths to update and their new values
-   * @return The {@link Task} for this operation.
+   * @return The ListenableFuture for this operation.
    */
-  public Task<Void> updateChildren(Map<String, Object> update) {
+  public ListenableFuture<Void> updateChildren(Map<String, Object> update) {
     return updateChildrenInternal(update, null);
   }
 
@@ -420,7 +424,7 @@ public class DatabaseReference extends Query {
 
   // Transactions
 
-  private Task<Void> updateChildrenInternal(
+  private ListenableFuture<Void> updateChildrenInternal(
       final Map<String, Object> update, final CompletionListener optListener) {
     if (update == null) {
       throw new NullPointerException("Can't pass null for argument 'update' in updateChildren()");
@@ -430,7 +434,8 @@ public class DatabaseReference extends Query {
         Validation.parseAndValidateUpdate(getPath(), bouncedUpdate);
     final CompoundWrite merge = CompoundWrite.fromPathMerge(parsedUpdate);
 
-    final Pair<Task<Void>, CompletionListener> wrapped = Utilities.wrapOnComplete(optListener);
+    final Pair<ListenableFuture<Void>, CompletionListener> wrapped =
+        Utilities.wrapOnComplete(optListener);
     repo.scheduleNow(
         new Runnable() {
           @Override
@@ -444,9 +449,9 @@ public class DatabaseReference extends Query {
   /**
    * Set the value at this location to 'null'
    *
-   * @return The {@link Task} for this operation.
+   * @return The ListenableFuture for this operation.
    */
-  public Task<Void> removeValue() {
+  public ListenableFuture<Void> removeValue() {
     return setValue(null);
   }
 

@@ -16,6 +16,7 @@
 
 package com.google.firebase.database;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.database.DatabaseReference.CompletionListener;
 import com.google.firebase.database.core.Path;
 import com.google.firebase.database.core.Repo;
@@ -27,7 +28,6 @@ import com.google.firebase.database.utilities.Pair;
 import com.google.firebase.database.utilities.Utilities;
 import com.google.firebase.database.utilities.Validation;
 import com.google.firebase.database.utilities.encoding.CustomClassMapper;
-import com.google.firebase.tasks.Task;
 
 import java.util.Map;
 
@@ -58,9 +58,9 @@ public class OnDisconnect {
    * changed or cleared when a user disconnects so that they appear "offline" to other users.
    *
    * @param value The value to be set when a disconnect occurs
-   * @return The {@link Task} for this operation.
+   * @return The ListenableFuture for this operation.
    */
-  public Task<Void> setValue(Object value) {
+  public ListenableFuture<Void> setValue(Object value) {
     return onDisconnectSetInternal(value, PriorityUtilities.NullPriority(), null);
   }
 
@@ -73,9 +73,9 @@ public class OnDisconnect {
    *
    * @param value The value to be set when a disconnect occurs
    * @param priority The priority to be set when a disconnect occurs
-   * @return The {@link Task} for this operation.
+   * @return The ListenableFuture for this operation.
    */
-  public Task<Void> setValue(Object value, String priority) {
+  public ListenableFuture<Void> setValue(Object value, String priority) {
     return onDisconnectSetInternal(value, PriorityUtilities.parsePriority(priority), null);
   }
 
@@ -88,9 +88,9 @@ public class OnDisconnect {
    *
    * @param value The value to be set when a disconnect occurs
    * @param priority The priority to be set when a disconnect occurs
-   * @return The {@link Task} for this operation.
+   * @return The ListenableFuture for this operation.
    */
-  public Task<Void> setValue(Object value, double priority) {
+  public ListenableFuture<Void> setValue(Object value, double priority) {
     return onDisconnectSetInternal(value, PriorityUtilities.parsePriority(priority), null);
   }
 
@@ -153,14 +153,15 @@ public class OnDisconnect {
     onDisconnectSetInternal(value, PriorityUtilities.parsePriority(priority), listener);
   }
 
-  private Task<Void> onDisconnectSetInternal(
+  private ListenableFuture<Void> onDisconnectSetInternal(
       Object value, Node priority, final CompletionListener optListener) {
     Validation.validateWritablePath(path);
     ValidationPath.validateWithObject(path, value);
     Object bouncedValue = CustomClassMapper.convertToPlainJavaTypes(value);
     Validation.validateWritableObject(bouncedValue);
     final Node node = NodeUtilities.NodeFromJSON(bouncedValue, priority);
-    final Pair<Task<Void>, CompletionListener> wrapped = Utilities.wrapOnComplete(optListener);
+    final Pair<ListenableFuture<Void>, CompletionListener> wrapped =
+        Utilities.wrapOnComplete(optListener);
     repo.scheduleNow(
         new Runnable() {
           @Override
@@ -177,9 +178,9 @@ public class OnDisconnect {
    * Ensure the data has the specified child values updated when the client is disconnected
    *
    * @param update The paths to update, along with their desired values
-   * @return The {@link Task} for this operation.
+   * @return The ListenableFuture for this operation.
    */
-  public Task<Void> updateChildren(Map<String, Object> update) {
+  public ListenableFuture<Void> updateChildren(Map<String, Object> update) {
     return updateChildrenInternal(update, null);
   }
 
@@ -193,10 +194,11 @@ public class OnDisconnect {
     updateChildrenInternal(update, listener);
   }
 
-  private Task<Void> updateChildrenInternal(
+  private ListenableFuture<Void> updateChildrenInternal(
       final Map<String, Object> update, final CompletionListener optListener) {
     final Map<Path, Node> parsedUpdate = Validation.parseAndValidateUpdate(path, update);
-    final Pair<Task<Void>, CompletionListener> wrapped = Utilities.wrapOnComplete(optListener);
+    final Pair<ListenableFuture<Void>, CompletionListener> wrapped =
+        Utilities.wrapOnComplete(optListener);
     repo.scheduleNow(
         new Runnable() {
           @Override
@@ -212,9 +214,9 @@ public class OnDisconnect {
   /**
    * Remove the value at this location when the client disconnects
    *
-   * @return The {@link Task} for this operation.
+   * @return The ListenableFuture for this operation.
    */
-  public Task<Void> removeValue() {
+  public ListenableFuture<Void> removeValue() {
     return setValue(null);
   }
 
@@ -232,9 +234,9 @@ public class OnDisconnect {
   /**
    * Cancel any disconnect operations that are queued up at this location
    *
-   * @return The {@link Task} for this operation.
+   * @return The ListenableFuture for this operation.
    */
-  public Task<Void> cancel() {
+  public ListenableFuture<Void> cancel() {
     return cancelInternal(null);
   }
 
@@ -247,8 +249,9 @@ public class OnDisconnect {
     cancelInternal(listener);
   }
 
-  private Task<Void> cancelInternal(final CompletionListener optListener) {
-    final Pair<Task<Void>, CompletionListener> wrapped = Utilities.wrapOnComplete(optListener);
+  private ListenableFuture<Void> cancelInternal(final CompletionListener optListener) {
+    final Pair<ListenableFuture<Void>, CompletionListener> wrapped =
+        Utilities.wrapOnComplete(optListener);
     repo.scheduleNow(
         new Runnable() {
           @Override

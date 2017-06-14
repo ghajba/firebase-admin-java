@@ -29,14 +29,13 @@ import com.google.api.client.googleapis.testing.auth.oauth2.MockTokenServerTrans
 import com.google.api.client.googleapis.util.Utils;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.TestOnlyImplFirebaseTrampolines;
 import com.google.firebase.auth.internal.FirebaseCustomAuthToken;
 import com.google.firebase.database.MapBuilder;
 import com.google.firebase.internal.Log;
-import com.google.firebase.tasks.Task;
-import com.google.firebase.tasks.Tasks;
 import com.google.firebase.testing.ServiceAccount;
 import com.google.firebase.testing.TestUtils;
 import java.io.ByteArrayInputStream;
@@ -206,7 +205,7 @@ public class FirebaseAuthTest {
     assertNotNull(auth);
     app.delete();
     try {
-      Tasks.await(auth.createCustomToken("foo"));
+      auth.createCustomToken("foo").get();
       fail("No error thrown when invoking auth after deleting app");
     } catch (ExecutionException expected) {
       assertTrue(expected.getCause() instanceof IllegalStateException);
@@ -227,9 +226,9 @@ public class FirebaseAuthTest {
     assertNotSame(auth1, auth2);
 
     if (isCertCredential) {
-      Task<String> task = auth2.createCustomToken("foo");
+      ListenableFuture<String> task = auth2.createCustomToken("foo");
       assertNotNull(task);
-      assertNotNull(Tasks.await(task, TestUtils.TEST_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS));
+      assertNotNull(task.get(TestUtils.TEST_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS));
     }
   }
 
@@ -256,7 +255,7 @@ public class FirebaseAuthTest {
     FirebaseApp app = FirebaseApp.initializeApp(firebaseOptions, "testCreateCustomToken");
     FirebaseAuth auth = FirebaseAuth.getInstance(app);
 
-    String token = Tasks.await(auth.createCustomToken("user1"));
+    String token = auth.createCustomToken("user1").get();
 
     FirebaseCustomAuthToken parsedToken = FirebaseCustomAuthToken.parse(new GsonFactory(), token);
     assertEquals(parsedToken.getPayload().getUid(), "user1");
@@ -278,7 +277,7 @@ public class FirebaseAuthTest {
     FirebaseAuth auth = FirebaseAuth.getInstance(app);
 
     String token =
-        Tasks.await(auth.createCustomToken("user1", MapBuilder.of("claim", "value")));
+        auth.createCustomToken("user1", MapBuilder.of("claim", "value")).get();
 
     FirebaseCustomAuthToken parsedToken = FirebaseCustomAuthToken.parse(new GsonFactory(), token);
     assertEquals(parsedToken.getPayload().getUid(), "user1");
@@ -311,7 +310,7 @@ public class FirebaseAuthTest {
         FirebaseApp.initializeApp(firebaseOptions, "testCredentialCertificateRequired");
 
     try {
-      Tasks.await(FirebaseAuth.getInstance(app).verifyIdToken("foo"));
+      FirebaseAuth.getInstance(app).verifyIdToken("foo").get();
       fail("Expected exception.");
     } catch (Exception expected) {
       Assert.assertEquals(
@@ -321,7 +320,7 @@ public class FirebaseAuthTest {
     }
 
     try {
-      Tasks.await(FirebaseAuth.getInstance(app).createCustomToken("foo"));
+      FirebaseAuth.getInstance(app).createCustomToken("foo").get();
       fail("Expected exception.");
     } catch (Exception expected) {
       Assert.assertEquals(

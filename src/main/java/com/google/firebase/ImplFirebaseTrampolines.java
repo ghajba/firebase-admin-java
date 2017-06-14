@@ -16,12 +16,12 @@
 
 package com.google.firebase;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.auth.FirebaseCredential;
 import com.google.firebase.internal.AuthStateListener;
 import com.google.firebase.internal.FirebaseService;
 import com.google.firebase.internal.GetTokenResult;
 import com.google.firebase.internal.NonNull;
-import com.google.firebase.tasks.Task;
 import java.io.IOException;
 
 /**
@@ -66,7 +66,8 @@ public final class ImplFirebaseTrampolines {
     return app.getToken(forceRefresh);
   }
 
-  public static Task<GetTokenResult> getTokenAsync(@NonNull FirebaseApp app, boolean forceRefresh) {
+  public static ListenableFuture<GetTokenResult> getTokenAsync(
+      @NonNull FirebaseApp app, boolean forceRefresh) {
     return app.getTokenAsync(forceRefresh);
   }
 

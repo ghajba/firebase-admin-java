@@ -27,6 +27,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.auth.GoogleOAuthAccessToken;
 import com.google.firebase.internal.AuthStateListener;
 import com.google.firebase.internal.FirebaseAppStore;
@@ -36,7 +37,6 @@ import com.google.firebase.internal.GetTokenResult;
 import com.google.firebase.internal.Log;
 import com.google.firebase.internal.NonNull;
 import com.google.firebase.internal.Nullable;
-import com.google.firebase.tasks.Task;
 
 import com.google.firebase.tasks.Tasks;
 import java.io.IOException;
@@ -355,9 +355,9 @@ public class FirebaseApp {
    *
    * @param forceRefresh force refreshes the token. Should only be set to <code>true</code> if the
    *     token is invalidated out of band.
-   * @return a {@link Task}
+   * @return a ListenableFuture
    */
-  Task<GetTokenResult> getTokenAsync(final boolean forceRefresh) {
+  ListenableFuture<GetTokenResult> getTokenAsync(final boolean forceRefresh) {
     return Tasks.call(new Callable<GetTokenResult>() {
       @Override
       public GetTokenResult call() throws Exception {
@@ -415,7 +415,7 @@ public class FirebaseApp {
   static class TokenRefresher {
 
     private final FirebaseApp firebaseApp;
-    private ScheduledFuture<Task<GetTokenResult>> future;
+    private ScheduledFuture<ListenableFuture<GetTokenResult>> future;
 
     TokenRefresher(FirebaseApp app) {
       this.firebaseApp = checkNotNull(app);
@@ -430,9 +430,9 @@ public class FirebaseApp {
     final void scheduleRefresh(long delayMillis) {
       cancelPrevious();
       scheduleNext(
-          new Callable<Task<GetTokenResult>>() {
+          new Callable<ListenableFuture<GetTokenResult>>() {
             @Override
-            public Task<GetTokenResult> call() throws Exception {
+            public ListenableFuture<GetTokenResult> call() throws Exception {
               return firebaseApp.getTokenAsync(true);
             }
           },
@@ -445,7 +445,7 @@ public class FirebaseApp {
       }
     }
 
-    protected void scheduleNext(Callable<Task<GetTokenResult>> task, long delayMillis) {
+    protected void scheduleNext(Callable<ListenableFuture<GetTokenResult>> task, long delayMillis) {
       try {
         future =
             FirebaseExecutors.DEFAULT_SCHEDULED_EXECUTOR.schedule(
