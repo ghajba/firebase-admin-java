@@ -17,7 +17,6 @@
 package com.google.firebase;
 
 import com.google.firebase.internal.GetTokenResult;
-import com.google.firebase.tasks.Task;
 import java.io.IOException;
 
 /**

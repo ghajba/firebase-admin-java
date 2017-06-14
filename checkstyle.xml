@@ -229,6 +229,7 @@
             <property name="allowedAnnotations" value="Override, Test"/>
             <property name="allowThrowsTagsForSubclasses" value="true"/>
             <property name="allowMissingJavadoc" value="true"/>
+            <property name="suppressLoadErrors" value="true"/>
         </module>
         <module name="MethodName">
             <property name="format" value="^[a-z][a-z0-9][a-zA-Z0-9_]*$"/>

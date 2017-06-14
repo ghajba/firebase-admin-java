@@ -21,7 +21,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.fail;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -29,14 +28,9 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.firebase.auth.FirebaseCredential;
 import com.google.firebase.auth.FirebaseCredentials;
 import com.google.firebase.auth.TestOnlyImplFirebaseAuthTrampolines;
-import com.google.firebase.database.TestHelpers;
-import com.google.firebase.tasks.OnSuccessListener;
-import com.google.firebase.tasks.Task;
-import com.google.firebase.tasks.Tasks;
 import com.google.firebase.testing.ServiceAccount;
 import com.google.firebase.testing.TestUtils;
 import java.io.IOException;
-import java.util.concurrent.Semaphore;
 import org.junit.Test;
 
 /** 

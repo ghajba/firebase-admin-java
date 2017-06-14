@@ -17,13 +17,8 @@
 package com.google.firebase.auth;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
-import com.google.api.client.googleapis.auth.oauth2.GooglePublicKeysManager;
 import com.google.api.client.json.JsonFactory;
-import com.google.api.client.util.Clock;
-import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseException;
-import com.google.firebase.tasks.Task;
-import com.google.firebase.tasks.Tasks;
 
 import java.io.IOException;
 
