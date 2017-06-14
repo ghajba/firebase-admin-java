@@ -221,8 +221,8 @@ public class BlockingFirebaseAuth {
    *
    * @param request A non-null {@link CreateRequest} instance.
    * @return A {@link UserRecord} instance corresponding to the newly created account.
-   * @throws NullPointerException if the provided request is null.
    * @throws FirebaseAuthException If an error occurs while creating the user.
+   * @throws NullPointerException if the provided request is null.
    */
   public UserRecord createUser(final CreateRequest request) throws FirebaseAuthException {
     checkNotNull(request, "create request must not be null");
@@ -237,8 +237,8 @@ public class BlockingFirebaseAuth {
    *
    * @param request A non-null {@link UpdateRequest} instance.
    * @return A {@link UserRecord} instance corresponding to the updated user account.
-   * @throws NullPointerException if the provided update request is null.
    * @throws FirebaseAuthException If an error occurs while updating the user.
+   * @throws NullPointerException if the provided update request is null.
    */
   public UserRecord updateUser(final UpdateRequest request) throws FirebaseAuthException {
     checkNotNull(request, "update request must not be null");
