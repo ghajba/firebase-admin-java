@@ -51,7 +51,7 @@ public class BlockingFirebaseAuth {
   private static final String ID_TOKEN_PARSE_ERROR = "ID_TOKEN_PARSE_ERROR";
   private static final String ACCESS_TOKEN_ERROR = "ACCESS_TOKEN_ERROR";
 
-  private final FirebaseApp firebaseApp;
+  final FirebaseApp firebaseApp;
   private final GooglePublicKeysManager googlePublicKeysManager;
   private final Clock clock;
   private final JsonFactory jsonFactory;

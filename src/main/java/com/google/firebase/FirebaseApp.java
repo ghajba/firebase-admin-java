@@ -28,6 +28,8 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.firebase.auth.GoogleOAuthAccessToken;
 import com.google.firebase.internal.AuthStateListener;
 import com.google.firebase.internal.FirebaseAppStore;
@@ -38,7 +40,6 @@ import com.google.firebase.internal.Log;
 import com.google.firebase.internal.NonNull;
 import com.google.firebase.internal.Nullable;
 
-import com.google.firebase.tasks.Tasks;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,6 +49,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -165,7 +168,7 @@ public class FirebaseApp {
   }
 
   /**
-   * A factory method to intialize a {@link FirebaseApp}.
+   * A factory method to initialize a {@link FirebaseApp}.
    *
    * @param options represents the global {@link FirebaseOptions}
    * @param name unique name for the app. It is an error to initialize an app with an already
@@ -358,12 +361,20 @@ public class FirebaseApp {
    * @return a ListenableFuture
    */
   ListenableFuture<GetTokenResult> getTokenAsync(final boolean forceRefresh) {
-    return Tasks.call(new Callable<GetTokenResult>() {
+    return getExecutor().submit(new Callable<GetTokenResult>() {
       @Override
       public GetTokenResult call() throws Exception {
         return getToken(forceRefresh);
       }
     });
+  }
+
+  private final ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+      Executors.newCachedThreadPool());
+
+  ListeningExecutorService getExecutor() {
+    // TODO: Make this configurable
+    return exec;
   }
 
   boolean isDefaultApp() {

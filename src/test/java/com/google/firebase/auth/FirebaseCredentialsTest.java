@@ -25,7 +25,6 @@ import com.google.api.client.googleapis.testing.auth.oauth2.MockTokenServerTrans
 import com.google.api.client.googleapis.util.Utils;
 import com.google.common.collect.ImmutableMap;
 import com.google.firebase.auth.FirebaseCredentials.BaseCredential;
-import com.google.firebase.tasks.Tasks;
 import com.google.firebase.testing.ServiceAccount;
 import com.google.firebase.testing.TestUtils;
 import java.io.ByteArrayInputStream;

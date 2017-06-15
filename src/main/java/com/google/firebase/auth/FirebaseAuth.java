@@ -22,9 +22,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.base.Strings;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.FirebaseApp;
+import com.google.firebase.ImplFirebaseTrampolines;
 import com.google.firebase.auth.UserRecord.CreateRequest;
 import com.google.firebase.auth.UserRecord.UpdateRequest;
-import com.google.firebase.tasks.Tasks;
 
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -98,7 +98,7 @@ public class FirebaseAuth {
    *     Custom Token, or unsuccessfully with the failure Exception.
    */
   public ListenableFuture<String> createCustomToken(final String uid) {
-    return Tasks.call(new Callable<String>() {
+    return schedule(new Callable<String>() {
       @Override
       public String call() throws Exception {
         return blockingAuth.createCustomToken(uid);
@@ -121,7 +121,7 @@ public class FirebaseAuth {
    */
   public ListenableFuture<String> createCustomToken(
       final String uid, final Map<String, Object> developerClaims) {
-    return Tasks.call(new Callable<String>() {
+    return schedule(new Callable<String>() {
       @Override
       public String call() throws Exception {
         return blockingAuth.createCustomToken(uid, developerClaims);
@@ -151,7 +151,7 @@ public class FirebaseAuth {
    *     unsuccessfully with the failure Exception.
    */
   public ListenableFuture<FirebaseToken> verifyIdToken(final String token) {
-    return Tasks.call(new Callable<FirebaseToken>() {
+    return schedule(new Callable<FirebaseToken>() {
       @Override
       public FirebaseToken call() throws Exception {
         return blockingAuth.verifyIdToken(token);
@@ -170,7 +170,7 @@ public class FirebaseAuth {
    */
   public ListenableFuture<UserRecord> getUser(final String uid) {
     checkArgument(!Strings.isNullOrEmpty(uid), "uid must not be null or empty");
-    return Tasks.call(new Callable<UserRecord>() {
+    return schedule(new Callable<UserRecord>() {
       @Override
       public UserRecord call() throws Exception {
         return blockingAuth.getUser(uid);
@@ -189,7 +189,7 @@ public class FirebaseAuth {
    */
   public ListenableFuture<UserRecord> getUserByEmail(final String email) {
     checkArgument(!Strings.isNullOrEmpty(email), "email must not be null or empty");
-    return Tasks.call(new Callable<UserRecord>() {
+    return schedule(new Callable<UserRecord>() {
       @Override
       public UserRecord call() throws Exception {
         return blockingAuth.getUserByEmail(email);
@@ -209,7 +209,7 @@ public class FirebaseAuth {
    */
   public ListenableFuture<UserRecord> createUser(final CreateRequest request) {
     checkNotNull(request, "create request must not be null");
-    return Tasks.call(new Callable<UserRecord>() {
+    return schedule(new Callable<UserRecord>() {
       @Override
       public UserRecord call() throws Exception {
         return blockingAuth.createUser(request);
@@ -229,7 +229,7 @@ public class FirebaseAuth {
    */
   public ListenableFuture<UserRecord> updateUser(final UpdateRequest request) {
     checkNotNull(request, "update request must not be null");
-    return Tasks.call(new Callable<UserRecord>() {
+    return schedule(new Callable<UserRecord>() {
       @Override
       public UserRecord call() throws Exception {
         return blockingAuth.updateUser(request);
@@ -248,12 +248,16 @@ public class FirebaseAuth {
    */
   public ListenableFuture<Void> deleteUser(final String uid) {
     checkArgument(!Strings.isNullOrEmpty(uid), "uid must not be null or empty");
-    return Tasks.call(new Callable<Void>() {
+    return schedule(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         blockingAuth.deleteUser(uid);
         return null;
       }
     });
+  }
+
+  private <T> ListenableFuture<T> schedule(Callable<T> command) {
+    return ImplFirebaseTrampolines.call(blockingAuth.firebaseApp, command);
   }
 }

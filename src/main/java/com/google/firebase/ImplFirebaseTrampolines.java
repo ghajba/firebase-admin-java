@@ -16,6 +16,8 @@
 
 package com.google.firebase;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.auth.FirebaseCredential;
 import com.google.firebase.internal.AuthStateListener;
@@ -23,6 +25,7 @@ import com.google.firebase.internal.FirebaseService;
 import com.google.firebase.internal.GetTokenResult;
 import com.google.firebase.internal.NonNull;
 import java.io.IOException;
+import java.util.concurrent.Callable;
 
 /**
  * Provides trampolines into package-private APIs used by components of Firebase. Intentionally
@@ -80,5 +83,12 @@ public final class ImplFirebaseTrampolines {
       @NonNull FirebaseApp app, @NonNull T service) {
     app.addService(service);
     return service;
+  }
+
+  public static <T> ListenableFuture<T> call(@NonNull FirebaseApp app,
+      @NonNull Callable<T> command) {
+    checkNotNull(app, "App must not be null");
+    checkNotNull(command, "Command must not be null");
+    return app.getExecutor().submit(command);
   }
 }
