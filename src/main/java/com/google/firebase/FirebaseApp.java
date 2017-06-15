@@ -28,12 +28,10 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.firebase.auth.GoogleOAuthAccessToken;
 import com.google.firebase.internal.AuthStateListener;
 import com.google.firebase.internal.FirebaseAppStore;
-import com.google.firebase.internal.FirebaseExecutors;
 import com.google.firebase.internal.FirebaseService;
 import com.google.firebase.internal.GetTokenResult;
 import com.google.firebase.internal.Log;
@@ -49,8 +47,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -96,6 +92,7 @@ public class FirebaseApp {
    * Per application lock for synchronizing all internal FirebaseApp state changes.
    */
   private final Object lock = new Object();
+  private final ThreadManager.Config config;
 
   /** Default constructor. */
   private FirebaseApp(String name, FirebaseOptions options,
@@ -105,6 +102,7 @@ public class FirebaseApp {
     this.options = checkNotNull(options);
     this.tokenRefresher = checkNotNull(factory).create(this);
     this.clock = checkNotNull(clock);
+    this.config = options.getThreadManager().init(this);
   }
 
   /** Returns a list of all FirebaseApps. */
@@ -361,7 +359,7 @@ public class FirebaseApp {
    * @return a ListenableFuture
    */
   ListenableFuture<GetTokenResult> getTokenAsync(final boolean forceRefresh) {
-    return getExecutor().submit(new Callable<GetTokenResult>() {
+    return call(new Callable<GetTokenResult>() {
       @Override
       public GetTokenResult call() throws Exception {
         return getToken(forceRefresh);
@@ -369,12 +367,14 @@ public class FirebaseApp {
     });
   }
 
-  private final ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-      Executors.newCachedThreadPool());
+  <T> ListenableFuture<T> call(Callable<T> command) {
+    checkNotNull(command, "Command must not be null");
+    return config.executor.submit(command);
+  }
 
-  ListeningExecutorService getExecutor() {
-    // TODO: Make this configurable
-    return exec;
+  <T> ListenableScheduledFuture<T> schedule(Callable<T> command, long millis) {
+    checkNotNull(command, "Command must not be null");
+    return config.scheduledExecutor.schedule(command, millis, TimeUnit.MILLISECONDS);
   }
 
   boolean isDefaultApp() {
@@ -458,9 +458,7 @@ public class FirebaseApp {
 
     protected void scheduleNext(Callable<ListenableFuture<GetTokenResult>> task, long delayMillis) {
       try {
-        future =
-            FirebaseExecutors.DEFAULT_SCHEDULED_EXECUTOR.schedule(
-                task, delayMillis, TimeUnit.MILLISECONDS);
+        future = firebaseApp.schedule(task, delayMillis);
       } catch (UnsupportedOperationException ignored) {
         // Cannot support task scheduling in the current runtime.
       }

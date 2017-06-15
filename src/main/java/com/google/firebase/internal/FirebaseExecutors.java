@@ -16,20 +16,91 @@
 
 package com.google.firebase.internal;
 
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.ThreadManager;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /** Default executors used for internal Firebase threads. */
 public class FirebaseExecutors {
 
-  public static final ScheduledExecutorService DEFAULT_SCHEDULED_EXECUTOR;
+  public static final ThreadManager DEFAULT_THREAD_MANAGER;
 
   static {
     if (GaeThreadFactory.isAvailable()) {
-      DEFAULT_SCHEDULED_EXECUTOR = GaeThreadFactory.DEFAULT_EXECUTOR;
+      DEFAULT_THREAD_MANAGER = new GaeThreadManager();
     } else {
-      DEFAULT_SCHEDULED_EXECUTOR =
-          Executors.newSingleThreadScheduledExecutor(Executors.defaultThreadFactory());
+      DEFAULT_THREAD_MANAGER = new DefaultThreadManager();
+    }
+  }
+
+  static final class DefaultThreadManager extends ThreadManager {
+
+    private ExecutorService executorService;
+    private ScheduledExecutorService scheduledExecutorService;
+    private final Map<String, Config> apps = new HashMap<>();
+
+    private DefaultThreadManager() {
+    }
+
+    @Override
+    protected synchronized Config init(FirebaseApp app) {
+      Config config = apps.get(app.getName());
+      if (config == null) {
+        if (apps.isEmpty()) {
+          executorService = Executors.newCachedThreadPool();
+          scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+        }
+        config = new Config(executorService, scheduledExecutorService);
+        apps.put(app.getName(), config);
+      }
+      return config;
+    }
+
+    @Override
+    protected synchronized void cleanup(FirebaseApp app) {
+      Config config = apps.remove(app.getName());
+      if (config != null && apps.isEmpty()) {
+        executorService.shutdownNow();
+        scheduledExecutorService.shutdownNow();
+        executorService = null;
+        scheduledExecutorService = null;
+      }
+    }
+  }
+
+  static final class GaeThreadManager extends ThreadManager {
+
+    private ScheduledExecutorService scheduledExecutorService;
+    private final Map<String, Config> apps = new HashMap<>();
+
+    private GaeThreadManager() {
+    }
+
+    @Override
+    protected synchronized Config init(FirebaseApp app) {
+      Config config = apps.get(app.getName());
+      if (config == null) {
+        if (apps.isEmpty()) {
+          scheduledExecutorService = new GaeScheduledExecutorService("FirebaseDefault");
+        }
+        config = new Config(scheduledExecutorService, scheduledExecutorService);
+        apps.put(app.getName(), config);
+      }
+      return config;
+    }
+
+    @Override
+    protected synchronized void cleanup(FirebaseApp app) {
+      Config config = apps.remove(app.getName());
+      if (config != null && apps.isEmpty()) {
+        scheduledExecutorService.shutdownNow();
+        scheduledExecutorService = null;
+      }
     }
   }
 }

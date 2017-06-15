@@ -21,9 +21,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.api.client.googleapis.util.Utils;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
-import com.google.common.base.MoreObjects;
 import com.google.firebase.auth.FirebaseCredential;
 import com.google.firebase.auth.FirebaseCredentials;
+import com.google.firebase.internal.FirebaseExecutors;
 import com.google.firebase.internal.NonNull;
 import com.google.firebase.internal.Nullable;
 
@@ -40,6 +40,7 @@ public final class FirebaseOptions {
   private final Map<String, Object> databaseAuthVariableOverride;
   private final HttpTransport httpTransport;
   private final JsonFactory jsonFactory;
+  private final ThreadManager threadManager;
 
   private FirebaseOptions(@NonNull FirebaseOptions.Builder builder) {
     this.firebaseCredential = checkNotNull(builder.firebaseCredential,
@@ -50,6 +51,7 @@ public final class FirebaseOptions {
         "FirebaseOptions must be initialized with a non-null HttpTransport.");
     this.jsonFactory = checkNotNull(builder.jsonFactory,
         "FirebaseOptions must be initialized with a non-null JsonFactory.");
+    this.threadManager = checkNotNull(builder.threadManager);
   }
 
   /**
@@ -96,6 +98,10 @@ public final class FirebaseOptions {
     return jsonFactory;
   }
 
+  ThreadManager getThreadManager() {
+    return threadManager;
+  }
+
   /** 
    * Builder for constructing {@link FirebaseOptions}. 
    */
@@ -106,6 +112,7 @@ public final class FirebaseOptions {
     private Map<String, Object> databaseAuthVariableOverride = new HashMap<>();
     private HttpTransport httpTransport = Utils.getDefaultTransport();
     private JsonFactory jsonFactory = Utils.getDefaultJsonFactory();
+    private ThreadManager threadManager = FirebaseExecutors.DEFAULT_THREAD_MANAGER;
 
     /** Constructs an empty builder. */
     public Builder() {}
@@ -122,6 +129,7 @@ public final class FirebaseOptions {
       databaseAuthVariableOverride = options.databaseAuthVariableOverride;
       httpTransport = options.httpTransport;
       jsonFactory = options.jsonFactory;
+      threadManager = options.threadManager;
     }
 
     /**
@@ -199,6 +207,11 @@ public final class FirebaseOptions {
      */
     public Builder setJsonFactory(JsonFactory jsonFactory) {
       this.jsonFactory = jsonFactory;
+      return this;
+    }
+
+    public Builder setThreadManager(ThreadManager threadManager) {
+      this.threadManager = threadManager;
       return this;
     }
 
