@@ -19,6 +19,7 @@ package com.google.firebase.database.core;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.google.firebase.FirebaseApp;
+import com.google.firebase.ImplFirebaseTrampolines;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.connection.ConnectionContext;
 import com.google.firebase.database.connection.HostInfo;
@@ -44,12 +45,10 @@ import java.util.concurrent.ThreadFactory;
  */
 class GaePlatform implements Platform {
 
-  private static final String TAG = "GaePlatform";
   private static final String PROCESS_PLATFORM = "AppEngine";
   private final FirebaseApp firebaseApp;
-  ThreadFactory threadFactoryInstance;
 
-  public GaePlatform(FirebaseApp firebaseApp) {
+  GaePlatform(FirebaseApp firebaseApp) {
     this.firebaseApp = firebaseApp;
   }
 
@@ -63,10 +62,7 @@ class GaePlatform implements Platform {
   }
 
   private ThreadFactory getGaeThreadFactory() {
-    GaeThreadFactory threadFactory = GaeThreadFactory.getInstance();
-    checkState(threadFactory.isUsingBackgroundThreads(),
-        "Failed to initialize a GAE background thread factory");
-    return threadFactory;
+    return ImplFirebaseTrampolines.getDatabaseThreadFactory(firebaseApp);
   }
 
   public void initialize() {

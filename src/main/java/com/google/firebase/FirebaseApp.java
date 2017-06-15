@@ -28,6 +28,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.firebase.auth.GoogleOAuthAccessToken;
 import com.google.firebase.internal.AuthStateListener;
 import com.google.firebase.internal.FirebaseAppStore;
@@ -87,6 +88,8 @@ public class FirebaseApp {
   private final AtomicBoolean deleted = new AtomicBoolean();
   private final List<AuthStateListener> authStateListeners = new ArrayList<>();
   private final Map<String, FirebaseService> services = new HashMap<>();
+  // TODO: Read thread manager via options
+  private final ThreadManager threadManager = FirebaseExecutors.DEFAULT_THREAD_MANAGER;
 
   /**
    * Per application lock for synchronizing all internal FirebaseApp state changes.
@@ -357,12 +360,27 @@ public class FirebaseApp {
    * @return a ListenableFuture
    */
   ListenableFuture<GetTokenResult> getTokenAsync(final boolean forceRefresh) {
-    return FirebaseExecutors.call(new Callable<GetTokenResult>() {
+    return call(new Callable<GetTokenResult>() {
       @Override
       public GetTokenResult call() throws Exception {
         return getToken(forceRefresh);
       }
     });
+  }
+
+  <T> ListenableFuture<T> call(Callable<T> command) {
+    checkNotNull(command);
+    return threadManager.getConfig(this).executor.submit(command);
+  }
+
+  <T> ListenableScheduledFuture<T> schedule(Callable<T> command, long delayMillis) {
+    checkNotNull(command);
+    return threadManager.getConfig(this)
+        .scheduledExecutor.schedule(command, delayMillis, TimeUnit.MILLISECONDS);
+  }
+
+  ThreadManager getThreadManager() {
+    return threadManager;
   }
 
   boolean isDefaultApp() {
@@ -446,7 +464,7 @@ public class FirebaseApp {
 
     protected void scheduleNext(Callable<ListenableFuture<GetTokenResult>> task, long delayMillis) {
       try {
-        future = FirebaseExecutors.schedule(task, delayMillis);
+        future = firebaseApp.schedule(task, delayMillis);
       } catch (UnsupportedOperationException ignored) {
         // Cannot support task scheduling in the current runtime.
       }

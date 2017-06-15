@@ -17,6 +17,7 @@
 package com.google.firebase.database.core;
 
 import com.google.firebase.FirebaseApp;
+import com.google.firebase.ImplFirebaseTrampolines;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.connection.ConnectionContext;
 import com.google.firebase.database.connection.HostInfo;
@@ -31,6 +32,7 @@ import com.google.firebase.database.utilities.DefaultRunLoop;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 
 class JvmPlatform implements Platform {
 
@@ -38,8 +40,15 @@ class JvmPlatform implements Platform {
 
   private final FirebaseApp firebaseApp;
 
-  public JvmPlatform(FirebaseApp firebaseApp) {
+  JvmPlatform(FirebaseApp firebaseApp) {
     this.firebaseApp = firebaseApp;
+  }
+
+  private ThreadFactory getThreadFactory() {
+    if (firebaseApp != null) {
+      return ImplFirebaseTrampolines.getDatabaseThreadFactory(firebaseApp);
+    }
+    return Executors.defaultThreadFactory();
   }
 
   @Override
@@ -49,14 +58,14 @@ class JvmPlatform implements Platform {
 
   @Override
   public EventTarget newEventTarget(Context ctx) {
-    return new ThreadPoolEventTarget(
-        Executors.defaultThreadFactory(), ThreadInitializer.defaultInstance);
+    return new ThreadPoolEventTarget(getThreadFactory(),
+        ThreadInitializer.defaultInstance);
   }
 
   @Override
   public RunLoop newRunLoop(final Context context) {
     final LogWrapper logger = context.getLogger("RunLoop");
-    return new DefaultRunLoop() {
+    return new DefaultRunLoop(getThreadFactory()) {
       @Override
       public void handleException(Throwable e) {
         logger.error(DefaultRunLoop.messageForException(e), e);

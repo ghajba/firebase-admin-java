@@ -207,8 +207,8 @@ public class FirebaseAuthTest {
     try {
       auth.createCustomToken("foo").get();
       fail("No error thrown when invoking auth after deleting app");
-    } catch (ExecutionException expected) {
-      assertTrue(expected.getCause() instanceof IllegalStateException);
+    } catch (IllegalStateException ignore) {
+      // expected
     }
   }
 
