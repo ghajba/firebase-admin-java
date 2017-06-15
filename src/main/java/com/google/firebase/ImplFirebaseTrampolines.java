@@ -85,9 +85,4 @@ public final class ImplFirebaseTrampolines {
     return service;
   }
 
-  public static <T> ListenableFuture<T> call(@NonNull FirebaseApp app,
-      @NonNull Callable<T> command) {
-    checkNotNull(app, "App must not be null");
-    return app.call(command);
-  }
 }

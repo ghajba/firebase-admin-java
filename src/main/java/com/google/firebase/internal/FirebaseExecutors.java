@@ -16,91 +16,45 @@
 
 package com.google.firebase.internal;
 
-import com.google.firebase.FirebaseApp;
-import com.google.firebase.ThreadManager;
+import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListenableScheduledFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /** Default executors used for internal Firebase threads. */
 public class FirebaseExecutors {
 
-  public static final ThreadManager DEFAULT_THREAD_MANAGER;
+  private static final ListeningExecutorService DEFAULT_EXECUTOR;
+
+  private static final ListeningScheduledExecutorService DEFAULT_SCHEDULED_EXECUTOR;
 
   static {
     if (GaeThreadFactory.isAvailable()) {
-      DEFAULT_THREAD_MANAGER = new GaeThreadManager();
+      DEFAULT_SCHEDULED_EXECUTOR = MoreExecutors.listeningDecorator(
+          GaeThreadFactory.DEFAULT_EXECUTOR);
+      DEFAULT_EXECUTOR = DEFAULT_SCHEDULED_EXECUTOR;
     } else {
-      DEFAULT_THREAD_MANAGER = new DefaultThreadManager();
+      DEFAULT_SCHEDULED_EXECUTOR = MoreExecutors.listeningDecorator(
+          Executors.newSingleThreadScheduledExecutor(Executors.defaultThreadFactory()));
+      DEFAULT_EXECUTOR = MoreExecutors.listeningDecorator(
+          Executors.newCachedThreadPool(Executors.defaultThreadFactory()));
     }
   }
 
-  static final class DefaultThreadManager extends ThreadManager {
-
-    private ExecutorService executorService;
-    private ScheduledExecutorService scheduledExecutorService;
-    private final Map<String, Config> apps = new HashMap<>();
-
-    private DefaultThreadManager() {
-    }
-
-    @Override
-    protected synchronized Config init(FirebaseApp app) {
-      Config config = apps.get(app.getName());
-      if (config == null) {
-        if (apps.isEmpty()) {
-          executorService = Executors.newCachedThreadPool();
-          scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-        }
-        config = new Config(executorService, scheduledExecutorService);
-        apps.put(app.getName(), config);
-      }
-      return config;
-    }
-
-    @Override
-    protected synchronized void cleanup(FirebaseApp app) {
-      Config config = apps.remove(app.getName());
-      if (config != null && apps.isEmpty()) {
-        executorService.shutdownNow();
-        scheduledExecutorService.shutdownNow();
-        executorService = null;
-        scheduledExecutorService = null;
-      }
-    }
+  public static <T> ListenableFuture<T> call(Callable<T> command) {
+    checkNotNull(command, "Command must not be null");
+    return DEFAULT_EXECUTOR.submit(command);
   }
 
-  static final class GaeThreadManager extends ThreadManager {
-
-    private ScheduledExecutorService scheduledExecutorService;
-    private final Map<String, Config> apps = new HashMap<>();
-
-    private GaeThreadManager() {
-    }
-
-    @Override
-    protected synchronized Config init(FirebaseApp app) {
-      Config config = apps.get(app.getName());
-      if (config == null) {
-        if (apps.isEmpty()) {
-          scheduledExecutorService = new GaeScheduledExecutorService("FirebaseDefault");
-        }
-        config = new Config(scheduledExecutorService, scheduledExecutorService);
-        apps.put(app.getName(), config);
-      }
-      return config;
-    }
-
-    @Override
-    protected synchronized void cleanup(FirebaseApp app) {
-      Config config = apps.remove(app.getName());
-      if (config != null && apps.isEmpty()) {
-        scheduledExecutorService.shutdownNow();
-        scheduledExecutorService = null;
-      }
-    }
+  public static <T> ListenableScheduledFuture<T> schedule(Callable<T> command, long delayMillis) {
+    checkNotNull(command, "Command must not be null");
+    return DEFAULT_SCHEDULED_EXECUTOR.schedule(command, delayMillis, TimeUnit.MILLISECONDS);
   }
 }

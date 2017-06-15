@@ -22,10 +22,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.base.Strings;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.FirebaseApp;
-import com.google.firebase.ImplFirebaseTrampolines;
 import com.google.firebase.auth.UserRecord.CreateRequest;
 import com.google.firebase.auth.UserRecord.UpdateRequest;
 
+import com.google.firebase.internal.FirebaseExecutors;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -258,6 +258,6 @@ public class FirebaseAuth {
   }
 
   private <T> ListenableFuture<T> schedule(Callable<T> command) {
-    return ImplFirebaseTrampolines.call(blockingAuth.firebaseApp, command);
+    return FirebaseExecutors.call(command);
   }
 }
