@@ -101,4 +101,9 @@ class JvmPlatform implements Platform {
   public PersistenceManager createPersistenceManager(Context ctx, String namespace) {
     return null;
   }
+
+  @Override
+  public ThreadInitializer getThreadInitializer() {
+    return ThreadInitializer.defaultInstance;
+  }
 }

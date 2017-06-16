@@ -16,8 +16,6 @@
 
 package com.google.firebase.database.core;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.ImplFirebaseTrampolines;
 import com.google.firebase.database.FirebaseDatabase;
@@ -29,7 +27,6 @@ import com.google.firebase.database.core.persistence.PersistenceManager;
 import com.google.firebase.database.logging.DefaultLogger;
 import com.google.firebase.database.logging.LogWrapper;
 import com.google.firebase.database.logging.Logger;
-import com.google.firebase.database.tubesock.WebSocket;
 import com.google.firebase.database.utilities.DefaultRunLoop;
 import com.google.firebase.internal.GaeThreadFactory;
 import com.google.firebase.internal.RevivingScheduledExecutor;
@@ -63,17 +60,6 @@ class GaePlatform implements Platform {
 
   private ThreadFactory getGaeThreadFactory() {
     return ImplFirebaseTrampolines.getDatabaseThreadFactory(firebaseApp);
-  }
-
-  public void initialize() {
-    WebSocket.setThreadFactory(
-        getGaeThreadFactory(),
-        new com.google.firebase.database.tubesock.ThreadInitializer() {
-          @Override
-          public void setName(Thread thread, String s) {
-            // Unsupported by GAE
-          }
-        });
   }
 
   @Override
@@ -121,5 +107,25 @@ class GaePlatform implements Platform {
   @Override
   public PersistenceManager createPersistenceManager(Context ctx, String namespace) {
     return null;
+  }
+
+  @Override
+  public ThreadInitializer getThreadInitializer() {
+    return new ThreadInitializer() {
+      @Override
+      public void setName(Thread thread, String s) {
+        // Unsupported by GAE
+      }
+
+      @Override
+      public void setDaemon(Thread t, boolean isDaemon) {
+        // Unsupported by GAE
+      }
+
+      @Override
+      public void setUncaughtExceptionHandler(Thread t, Thread.UncaughtExceptionHandler handler) {
+        // Unsupported by GAE
+      }
+    };
   }
 }
