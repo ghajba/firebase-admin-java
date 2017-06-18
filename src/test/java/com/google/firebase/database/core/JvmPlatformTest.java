@@ -18,15 +18,43 @@ package com.google.firebase.database.core;
 
 import static org.junit.Assert.assertEquals;
 
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
+import com.google.firebase.TestOnlyImplFirebaseTrampolines;
+import com.google.firebase.auth.FirebaseCredentials;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.TestHelpers;
+import com.google.firebase.testing.ServiceAccount;
+
+import java.io.IOException;
+
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
+
 
 public class JvmPlatformTest {
 
+  private static FirebaseApp testApp;
+
+  @BeforeClass
+  public static void setUpClass() throws IOException {
+    testApp = FirebaseApp.initializeApp(
+        new FirebaseOptions.Builder()
+            .setCredential(FirebaseCredentials.fromCertificate(ServiceAccount.EDITOR.asStream()))
+            .setDatabaseUrl("https://admin-java-sdk.firebaseio.com")
+            .build());
+  }
+
+  @AfterClass
+  public static void tearDownClass() {
+    TestOnlyImplFirebaseTrampolines.clearInstancesForTest();
+  }
+
   @Test
-  public void userAgentHasCorrectParts() {
-    Context cfg = new DatabaseConfig();
+  public void userAgentHasCorrectParts() throws IOException {
+    Context cfg = TestHelpers.newTestConfig(testApp);
     cfg.freeze();
     String userAgent = cfg.getUserAgent();
     String[] parts = userAgent.split("/");

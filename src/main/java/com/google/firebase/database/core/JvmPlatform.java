@@ -16,6 +16,8 @@
 
 package com.google.firebase.database.core;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.ImplFirebaseTrampolines;
 import com.google.firebase.database.FirebaseDatabase;
@@ -41,14 +43,11 @@ class JvmPlatform implements Platform {
   private final FirebaseApp firebaseApp;
 
   JvmPlatform(FirebaseApp firebaseApp) {
-    this.firebaseApp = firebaseApp;
+    this.firebaseApp = checkNotNull(firebaseApp);
   }
 
   private ThreadFactory getThreadFactory() {
-    if (firebaseApp != null) {
-      return ImplFirebaseTrampolines.getDatabaseThreadFactory(firebaseApp);
-    }
-    return Executors.defaultThreadFactory();
+    return ImplFirebaseTrampolines.getDatabaseThreadFactory(firebaseApp);
   }
 
   @Override
