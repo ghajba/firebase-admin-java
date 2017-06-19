@@ -19,7 +19,6 @@ package com.google.firebase.internal;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -31,8 +30,6 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class GaeThreadFactory implements ThreadFactory {
 
-  static final ScheduledExecutorService DEFAULT_EXECUTOR =
-      new GaeScheduledExecutorService("FirebaseDefault");
   private static final String TAG = "GaeThreadFactory";
   private static final String GAE_THREAD_MANAGER_CLASS = "com.google.appengine.api.ThreadManager";
   private static final GaeThreadFactory instance = new GaeThreadFactory();
