@@ -32,7 +32,6 @@ import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.firebase.auth.GoogleOAuthAccessToken;
 import com.google.firebase.internal.AuthStateListener;
 import com.google.firebase.internal.FirebaseAppStore;
-import com.google.firebase.internal.FirebaseExecutors;
 import com.google.firebase.internal.FirebaseService;
 import com.google.firebase.internal.GetTokenResult;
 import com.google.firebase.internal.Log;
@@ -88,8 +87,7 @@ public class FirebaseApp {
   private final AtomicBoolean deleted = new AtomicBoolean();
   private final List<AuthStateListener> authStateListeners = new ArrayList<>();
   private final Map<String, FirebaseService> services = new HashMap<>();
-  // TODO: Read thread manager via options
-  private final ThreadManager threadManager = FirebaseExecutors.DEFAULT_THREAD_MANAGER;
+  private final ThreadManager threadManager;
 
   /**
    * Per application lock for synchronizing all internal FirebaseApp state changes.
@@ -104,6 +102,7 @@ public class FirebaseApp {
     this.options = checkNotNull(options);
     this.tokenRefresher = checkNotNull(factory).create(this);
     this.clock = checkNotNull(clock);
+    this.threadManager = options.getThreadManager();
   }
 
   /** Returns a list of all FirebaseApps. */

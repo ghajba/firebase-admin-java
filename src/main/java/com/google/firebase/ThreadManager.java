@@ -29,8 +29,11 @@ import java.util.concurrent.ThreadFactory;
 public abstract class ThreadManager {
 
   /**
-   * Returns the thread configuration for an app. Implementations may return the same
-   * {@link Config} for multiple apps.
+   * Returns the thread configuration for an app. Implementations may return the same instance of
+   * {@link Config} for multiple apps. The returned configuration is used by all components
+   * of an app except for the realtime database. Database has far stricter and complicated
+   * threading requirements, and thus initializes its own threading resources using the
+   * <code>ThreadFactory</code> returned by {@link ThreadManager#getDatabaseThreadFactory()}.
    *
    * @param app A {@link FirebaseApp} instance.
    * @return A non-null {@link Config} instance.

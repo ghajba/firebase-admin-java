@@ -32,7 +32,6 @@ import com.google.firebase.database.logging.Logger;
 import com.google.firebase.database.utilities.DefaultRunLoop;
 
 import java.util.List;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 
