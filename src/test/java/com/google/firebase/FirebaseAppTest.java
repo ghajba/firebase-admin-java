@@ -29,9 +29,9 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.google.api.core.ApiFuture;
 import com.google.common.base.Defaults;
 import com.google.common.io.BaseEncoding;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.FirebaseApp.TokenRefresher;
 import com.google.firebase.FirebaseOptions.Builder;
 import com.google.firebase.auth.FirebaseCredential;
@@ -425,7 +425,7 @@ public class FirebaseAppTest {
 
   private static class MockTokenRefresher extends TokenRefresher {
 
-    private Callable<ListenableFuture<GetTokenResult>> task;
+    private Callable<ApiFuture<GetTokenResult>> task;
     private long executeAt;
     private long time;
 
@@ -439,7 +439,7 @@ public class FirebaseAppTest {
     }
 
     @Override
-    protected void scheduleNext(Callable<ListenableFuture<GetTokenResult>> task, long delayMillis) {
+    protected void scheduleNext(Callable<ApiFuture<GetTokenResult>> task, long delayMillis) {
       this.task = task;
       executeAt = time + delayMillis;
     }
@@ -451,7 +451,7 @@ public class FirebaseAppTest {
      * @param delayMinutes Duration in minutes to advance the clock by
      */
     void simulateDelay(int delayMinutes) throws Exception {
-      ListenableFuture<GetTokenResult> refreshTask = null;
+      ApiFuture<GetTokenResult> refreshTask = null;
       synchronized (this) {
         time += TimeUnit.MINUTES.toMillis(delayMinutes);
         if (task != null && time >= executeAt) {

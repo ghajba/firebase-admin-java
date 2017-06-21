@@ -18,8 +18,8 @@ package com.google.firebase.database.core;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
+import com.google.api.core.ApiFutureCallback;
+import com.google.api.core.ApiFutures;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.ImplFirebaseTrampolines;
 import com.google.firebase.database.util.GAuthToken;
@@ -54,8 +54,8 @@ public class JvmAuthTokenProvider implements AuthTokenProvider {
 
   @Override
   public void getToken(boolean forceRefresh, final GetTokenCompletionListener listener) {
-    Futures.addCallback(ImplFirebaseTrampolines.getTokenAsync(firebaseApp, forceRefresh),
-        new FutureCallback<GetTokenResult>() {
+    ApiFutures.addCallback(ImplFirebaseTrampolines.getTokenAsync(firebaseApp, forceRefresh),
+        new ApiFutureCallback<GetTokenResult>() {
           @Override
           public void onSuccess(@Nullable GetTokenResult result) {
             listener.onSuccess(wrapOAuthToken(firebaseApp, result));

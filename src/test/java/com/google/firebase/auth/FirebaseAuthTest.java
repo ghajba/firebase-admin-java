@@ -28,8 +28,8 @@ import static org.junit.Assert.fail;
 import com.google.api.client.googleapis.testing.auth.oauth2.MockTokenServerTransport;
 import com.google.api.client.googleapis.util.Utils;
 import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.core.ApiFuture;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.TestOnlyImplFirebaseTrampolines;
@@ -226,7 +226,7 @@ public class FirebaseAuthTest {
     assertNotSame(auth1, auth2);
 
     if (isCertCredential) {
-      ListenableFuture<String> task = auth2.createCustomToken("foo");
+      ApiFuture<String> task = auth2.createCustomToken("foo");
       assertNotNull(task);
       assertNotNull(task.get(TestUtils.TEST_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS));
     }

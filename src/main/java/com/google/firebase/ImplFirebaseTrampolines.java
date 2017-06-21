@@ -16,7 +16,7 @@
 
 package com.google.firebase;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import com.google.api.core.ApiFuture;
 import com.google.firebase.auth.FirebaseCredential;
 import com.google.firebase.internal.AuthStateListener;
 import com.google.firebase.internal.FirebaseService;
@@ -68,7 +68,7 @@ public final class ImplFirebaseTrampolines {
     return app.getToken(forceRefresh);
   }
 
-  public static ListenableFuture<GetTokenResult> getTokenAsync(
+  public static ApiFuture<GetTokenResult> getTokenAsync(
       @NonNull FirebaseApp app, boolean forceRefresh) {
     return app.getTokenAsync(forceRefresh);
   }
@@ -84,7 +84,7 @@ public final class ImplFirebaseTrampolines {
     return service;
   }
 
-  public static <T> ListenableFuture<T> call(@NonNull FirebaseApp app,
+  public static <T> ApiFuture<T> call(@NonNull FirebaseApp app,
       @NonNull Callable<T> command) {
     return app.call(command);
   }

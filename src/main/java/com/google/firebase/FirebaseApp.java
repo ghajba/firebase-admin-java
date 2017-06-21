@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.google.api.core.ApiFuture;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
@@ -30,6 +31,7 @@ import com.google.common.io.BaseEncoding;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.firebase.auth.GoogleOAuthAccessToken;
+import com.google.firebase.internal.ApiFutureImpl;
 import com.google.firebase.internal.AuthStateListener;
 import com.google.firebase.internal.FirebaseAppStore;
 import com.google.firebase.internal.FirebaseService;
@@ -47,7 +49,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -358,7 +359,7 @@ public class FirebaseApp {
    *     token is invalidated out of band.
    * @return a ListenableFuture
    */
-  ListenableFuture<GetTokenResult> getTokenAsync(final boolean forceRefresh) {
+  ApiFuture<GetTokenResult> getTokenAsync(final boolean forceRefresh) {
     return call(new Callable<GetTokenResult>() {
       @Override
       public GetTokenResult call() throws Exception {
@@ -367,15 +368,17 @@ public class FirebaseApp {
     });
   }
 
-  <T> ListenableFuture<T> call(Callable<T> command) {
+  <T> ApiFuture<T> call(Callable<T> command) {
     checkNotNull(command);
-    return threadManager.getConfig(this).executor.submit(command);
+    ListenableFuture<T> future = threadManager.getConfig(this).executor.submit(command);
+    return new ApiFutureImpl<>(future);
   }
 
-  <T> ListenableScheduledFuture<T> schedule(Callable<T> command, long delayMillis) {
+  <T> ApiFuture<T> schedule(Callable<T> command, long delayMillis) {
     checkNotNull(command);
-    return threadManager.getConfig(this)
+    ListenableScheduledFuture<T> future = threadManager.getConfig(this)
         .scheduledExecutor.schedule(command, delayMillis, TimeUnit.MILLISECONDS);
+    return new ApiFutureImpl<>(future);
   }
 
   ThreadManager getThreadManager() {
@@ -431,7 +434,7 @@ public class FirebaseApp {
   static class TokenRefresher {
 
     private final FirebaseApp firebaseApp;
-    private ScheduledFuture<ListenableFuture<GetTokenResult>> future;
+    private ApiFuture<ApiFuture<GetTokenResult>> future;
 
     TokenRefresher(FirebaseApp app) {
       this.firebaseApp = checkNotNull(app);
@@ -446,9 +449,9 @@ public class FirebaseApp {
     final void scheduleRefresh(long delayMillis) {
       cancelPrevious();
       scheduleNext(
-          new Callable<ListenableFuture<GetTokenResult>>() {
+          new Callable<ApiFuture<GetTokenResult>>() {
             @Override
-            public ListenableFuture<GetTokenResult> call() throws Exception {
+            public ApiFuture<GetTokenResult> call() throws Exception {
               return firebaseApp.getTokenAsync(true);
             }
           },
@@ -461,7 +464,7 @@ public class FirebaseApp {
       }
     }
 
-    protected void scheduleNext(Callable<ListenableFuture<GetTokenResult>> task, long delayMillis) {
+    protected void scheduleNext(Callable<ApiFuture<GetTokenResult>> task, long delayMillis) {
       try {
         future = firebaseApp.schedule(task, delayMillis);
       } catch (UnsupportedOperationException ignored) {
