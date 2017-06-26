@@ -19,9 +19,9 @@ package com.google.firebase.database.integration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.google.api.core.ApiFutureCallback;
+import com.google.api.core.ApiFutures;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.auth.FirebaseCredentials;
@@ -158,7 +158,7 @@ public class FirebaseDatabaseAuthTestIT {
       throws InterruptedException {
     final CountDownLatch lock = new CountDownLatch(1);
     final AtomicBoolean success = new AtomicBoolean(false);
-    Futures.addCallback(ref.setValue("wrote something"), new FutureCallback<Void>() {
+    ApiFutures.addCallback(ref.setValue("wrote something"), new ApiFutureCallback<Void>() {
       @Override
       public void onSuccess(@Nullable Void result) {
         success.compareAndSet(false, true);

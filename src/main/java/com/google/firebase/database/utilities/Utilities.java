@@ -16,9 +16,9 @@
 
 package com.google.firebase.database.utilities;
 
+import com.google.api.core.ApiFuture;
+import com.google.api.core.SettableApiFuture;
 import com.google.common.io.BaseEncoding;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseException;
 import com.google.firebase.database.DatabaseReference;
@@ -237,10 +237,10 @@ public class Utilities {
     }
   }
 
-  public static Pair<ListenableFuture<Void>, DatabaseReference.CompletionListener> wrapOnComplete(
+  public static Pair<ApiFuture<Void>, DatabaseReference.CompletionListener> wrapOnComplete(
       DatabaseReference.CompletionListener optListener) {
     if (optListener == null) {
-      final SettableFuture<Void> source = SettableFuture.create();
+      final SettableApiFuture<Void> source = SettableApiFuture.create();
       DatabaseReference.CompletionListener listener =
           new DatabaseReference.CompletionListener() {
             @Override
@@ -252,7 +252,7 @@ public class Utilities {
               }
             }
           };
-      return new Pair<>((ListenableFuture<Void>) source, listener);
+      return new Pair<>((ApiFuture<Void>) source, listener);
     } else {
       // If a listener is supplied we do not want to create a Task
       return new Pair<>(null, optListener);

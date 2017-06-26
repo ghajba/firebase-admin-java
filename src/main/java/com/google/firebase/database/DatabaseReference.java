@@ -16,6 +16,7 @@
 
 package com.google.firebase.database;
 
+import com.google.api.core.ApiFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.database.core.CompoundWrite;
 import com.google.firebase.database.core.DatabaseConfig;
@@ -174,7 +175,7 @@ public class DatabaseReference extends Query {
    * @param value The value to set at this location
    * @return The ListenableFuture for this operation.
    */
-  public ListenableFuture<Void> setValue(Object value) {
+  public ApiFuture<Void> setValue(Object value) {
     return setValueInternal(value, PriorityUtilities.parsePriority(null), null);
   }
 
@@ -214,7 +215,7 @@ public class DatabaseReference extends Query {
    * @param priority The priority to set at this location
    * @return The ListenableFuture for this operation.
    */
-  public ListenableFuture<Void> setValue(Object value, Object priority) {
+  public ApiFuture<Void> setValue(Object value, Object priority) {
     return setValueInternal(value, PriorityUtilities.parsePriority(priority), null);
   }
 
@@ -294,14 +295,14 @@ public class DatabaseReference extends Query {
 
   // Update
 
-  private ListenableFuture<Void> setValueInternal(Object value, Node priority,
+  private ApiFuture<Void> setValueInternal(Object value, Node priority,
       CompletionListener optListener) {
     Validation.validateWritablePath(getPath());
     ValidationPath.validateWithObject(getPath(), value);
     Object bouncedValue = CustomClassMapper.convertToPlainJavaTypes(value);
     Validation.validateWritableObject(bouncedValue);
     final Node node = NodeUtilities.NodeFromJSON(bouncedValue, priority);
-    final Pair<ListenableFuture<Void>, CompletionListener> wrapped =
+    final Pair<ApiFuture<Void>, CompletionListener> wrapped =
         Utilities.wrapOnComplete(optListener);
     repo.scheduleNow(
         new Runnable() {
@@ -342,7 +343,7 @@ public class DatabaseReference extends Query {
    * @param priority The priority to set at the specified location.
    * @return The ListenableFuture for this operation.
    */
-  public ListenableFuture<Void> setPriority(Object priority) {
+  public ApiFuture<Void> setPriority(Object priority) {
     return setPriorityInternal(PriorityUtilities.parsePriority(priority), null);
   }
 
@@ -381,11 +382,11 @@ public class DatabaseReference extends Query {
 
   // Remove
 
-  private ListenableFuture<Void> setPriorityInternal(final Node priority,
+  private ApiFuture<Void> setPriorityInternal(final Node priority,
       CompletionListener optListener) {
     Validation.validateWritablePath(getPath());
 
-    final Pair<ListenableFuture<Void>, CompletionListener> wrapped =
+    final Pair<ApiFuture<Void>, CompletionListener> wrapped =
         Utilities.wrapOnComplete(optListener);
     repo.scheduleNow(
         new Runnable() {
@@ -405,7 +406,7 @@ public class DatabaseReference extends Query {
    * @param update The paths to update and their new values
    * @return The ListenableFuture for this operation.
    */
-  public ListenableFuture<Void> updateChildren(Map<String, Object> update) {
+  public ApiFuture<Void> updateChildren(Map<String, Object> update) {
     return updateChildrenInternal(update, null);
   }
 
@@ -424,7 +425,7 @@ public class DatabaseReference extends Query {
 
   // Transactions
 
-  private ListenableFuture<Void> updateChildrenInternal(
+  private ApiFuture<Void> updateChildrenInternal(
       final Map<String, Object> update, final CompletionListener optListener) {
     if (update == null) {
       throw new NullPointerException("Can't pass null for argument 'update' in updateChildren()");
@@ -434,7 +435,7 @@ public class DatabaseReference extends Query {
         Validation.parseAndValidateUpdate(getPath(), bouncedUpdate);
     final CompoundWrite merge = CompoundWrite.fromPathMerge(parsedUpdate);
 
-    final Pair<ListenableFuture<Void>, CompletionListener> wrapped =
+    final Pair<ApiFuture<Void>, CompletionListener> wrapped =
         Utilities.wrapOnComplete(optListener);
     repo.scheduleNow(
         new Runnable() {
@@ -451,7 +452,7 @@ public class DatabaseReference extends Query {
    *
    * @return The ListenableFuture for this operation.
    */
-  public ListenableFuture<Void> removeValue() {
+  public ApiFuture<Void> removeValue() {
     return setValue(null);
   }
 

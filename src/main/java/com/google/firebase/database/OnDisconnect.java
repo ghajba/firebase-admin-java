@@ -16,7 +16,7 @@
 
 package com.google.firebase.database;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import com.google.api.core.ApiFuture;
 import com.google.firebase.database.DatabaseReference.CompletionListener;
 import com.google.firebase.database.core.Path;
 import com.google.firebase.database.core.Repo;
@@ -60,7 +60,7 @@ public class OnDisconnect {
    * @param value The value to be set when a disconnect occurs
    * @return The ListenableFuture for this operation.
    */
-  public ListenableFuture<Void> setValue(Object value) {
+  public ApiFuture<Void> setValue(Object value) {
     return onDisconnectSetInternal(value, PriorityUtilities.NullPriority(), null);
   }
 
@@ -75,7 +75,7 @@ public class OnDisconnect {
    * @param priority The priority to be set when a disconnect occurs
    * @return The ListenableFuture for this operation.
    */
-  public ListenableFuture<Void> setValue(Object value, String priority) {
+  public ApiFuture<Void> setValue(Object value, String priority) {
     return onDisconnectSetInternal(value, PriorityUtilities.parsePriority(priority), null);
   }
 
@@ -90,7 +90,7 @@ public class OnDisconnect {
    * @param priority The priority to be set when a disconnect occurs
    * @return The ListenableFuture for this operation.
    */
-  public ListenableFuture<Void> setValue(Object value, double priority) {
+  public ApiFuture<Void> setValue(Object value, double priority) {
     return onDisconnectSetInternal(value, PriorityUtilities.parsePriority(priority), null);
   }
 
@@ -153,14 +153,14 @@ public class OnDisconnect {
     onDisconnectSetInternal(value, PriorityUtilities.parsePriority(priority), listener);
   }
 
-  private ListenableFuture<Void> onDisconnectSetInternal(
+  private ApiFuture<Void> onDisconnectSetInternal(
       Object value, Node priority, final CompletionListener optListener) {
     Validation.validateWritablePath(path);
     ValidationPath.validateWithObject(path, value);
     Object bouncedValue = CustomClassMapper.convertToPlainJavaTypes(value);
     Validation.validateWritableObject(bouncedValue);
     final Node node = NodeUtilities.NodeFromJSON(bouncedValue, priority);
-    final Pair<ListenableFuture<Void>, CompletionListener> wrapped =
+    final Pair<ApiFuture<Void>, CompletionListener> wrapped =
         Utilities.wrapOnComplete(optListener);
     repo.scheduleNow(
         new Runnable() {
@@ -180,7 +180,7 @@ public class OnDisconnect {
    * @param update The paths to update, along with their desired values
    * @return The ListenableFuture for this operation.
    */
-  public ListenableFuture<Void> updateChildren(Map<String, Object> update) {
+  public ApiFuture<Void> updateChildren(Map<String, Object> update) {
     return updateChildrenInternal(update, null);
   }
 
@@ -194,10 +194,10 @@ public class OnDisconnect {
     updateChildrenInternal(update, listener);
   }
 
-  private ListenableFuture<Void> updateChildrenInternal(
+  private ApiFuture<Void> updateChildrenInternal(
       final Map<String, Object> update, final CompletionListener optListener) {
     final Map<Path, Node> parsedUpdate = Validation.parseAndValidateUpdate(path, update);
-    final Pair<ListenableFuture<Void>, CompletionListener> wrapped =
+    final Pair<ApiFuture<Void>, CompletionListener> wrapped =
         Utilities.wrapOnComplete(optListener);
     repo.scheduleNow(
         new Runnable() {
@@ -216,7 +216,7 @@ public class OnDisconnect {
    *
    * @return The ListenableFuture for this operation.
    */
-  public ListenableFuture<Void> removeValue() {
+  public ApiFuture<Void> removeValue() {
     return setValue(null);
   }
 
@@ -236,7 +236,7 @@ public class OnDisconnect {
    *
    * @return The ListenableFuture for this operation.
    */
-  public ListenableFuture<Void> cancel() {
+  public ApiFuture<Void> cancel() {
     return cancelInternal(null);
   }
 
@@ -249,8 +249,8 @@ public class OnDisconnect {
     cancelInternal(listener);
   }
 
-  private ListenableFuture<Void> cancelInternal(final CompletionListener optListener) {
-    final Pair<ListenableFuture<Void>, CompletionListener> wrapped =
+  private ApiFuture<Void> cancelInternal(final CompletionListener optListener) {
+    final Pair<ApiFuture<Void>, CompletionListener> wrapped =
         Utilities.wrapOnComplete(optListener);
     repo.scheduleNow(
         new Runnable() {
