@@ -21,6 +21,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * GaeThreadFactory is a thread factory that works on App Engine. It uses background threads on
@@ -30,7 +32,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class GaeThreadFactory implements ThreadFactory {
 
-  private static final String TAG = "GaeThreadFactory";
+  private static final Logger logger = LoggerFactory.getLogger(GaeThreadFactory.class);
   private static final String GAE_THREAD_MANAGER_CLASS = "com.google.appengine.api.ThreadManager";
   private static final GaeThreadFactory instance = new GaeThreadFactory();
   private final AtomicReference<ThreadFactoryWrapper> threadFactory = new AtomicReference<>(null);
@@ -112,10 +114,8 @@ public class GaeThreadFactory implements ThreadFactory {
         thread = threadFactory.newThread(r);
         usesBackgroundThreads = true;
       } catch (IllegalStateException e) {
-        Log.w(
-            TAG,
-            "Falling back to GAE's request-scoped threads. Firebase requires "
-                + "manually-scaled instances for most operations.");
+        logger.warn("Falling back to GAE's request-scoped threads. Firebase requires "
+            + "manually-scaled instances for most operations.");
         threadFactory = createRequestScopedFactory();
         thread = threadFactory.newThread(r);
       }
@@ -127,10 +127,8 @@ public class GaeThreadFactory implements ThreadFactory {
           new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
-              Log.w(
-                  TAG,
-                  "Failed to initialize native GAE thread factory. "
-                      + "GaeThreadFactory cannot be used in a non-GAE environment.");
+              logger.warn("Failed to initialize native GAE thread factory. "
+                  + "GaeThreadFactory cannot be used in a non-GAE environment.");
               return null;
             }
           };
