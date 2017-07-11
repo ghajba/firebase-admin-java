@@ -381,6 +381,7 @@ public class FirebaseApp {
         pools = threadPools.get();
         if (pools == null) {
           pools = threadManager.getThreadPools(this);
+          threadPools.set(pools);
         }
       }
     }
