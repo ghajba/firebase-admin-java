@@ -105,7 +105,7 @@ public class FirebaseExecutors {
     }
 
     @Override
-    protected ThreadFactory getDatabaseThreadFactory(FirebaseApp app) {
+    protected ThreadFactory getDatabaseThreadFactory() {
       return Executors.defaultThreadFactory();
     }
   }
@@ -130,10 +130,11 @@ public class FirebaseExecutors {
     }
 
     @Override
-    protected ThreadFactory getDatabaseThreadFactory(FirebaseApp app) {
+    protected ThreadFactory getDatabaseThreadFactory() {
       GaeThreadFactory threadFactory = GaeThreadFactory.getInstance();
       checkState(threadFactory.isUsingBackgroundThreads(),
-          "Failed to initialize a GAE background thread factory");
+          "Failed to initialize a GAE background thread factory. Realtime database support "
+              + "requires background thread support.");
       return threadFactory;
     }
   }

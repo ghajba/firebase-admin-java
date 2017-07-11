@@ -29,9 +29,10 @@ import java.util.concurrent.ThreadFactory;
 /**
  * An interface that controls the thread pools and factories used by the Admin SDK. Each
  * instance of {@link FirebaseApp} uses an implementation of this interface to create and manage
- * threads. Multiple app instances may use a single, shared <code>ThreadManager</code> instance.
+ * threads. Multiple app instances may use the same <code>ThreadManager</code> instance.
  * Methods in this interface (except for cleanup), may get invoked multiple times by the same
- * app, during its lifetime.
+ * app, during its lifetime. Apps may also invoke methods of this interface concurrently, and
+ * therefore implementations should provide any synchronization necessary.
  */
 public abstract class ThreadManager {
 
@@ -40,7 +41,7 @@ public abstract class ThreadManager {
    * {@link ThreadPools} for multiple apps. The returned pools are used by all components
    * of an app except for the realtime database. Database has far stricter and complicated
    * threading requirements, and thus initializes its own thread pools using the
-   * factory returned by {@link ThreadManager#getDatabaseThreadFactory(FirebaseApp)}.
+   * factory returned by {@link ThreadManager#getDatabaseThreadFactory()}.
    *
    * @param app A {@link FirebaseApp} instance.
    * @return A non-null {@link ThreadPools} instance.
@@ -54,7 +55,7 @@ public abstract class ThreadManager {
    *
    * @return A non-null <code>ThreadFactory</code>.
    */
-  protected abstract ThreadFactory getDatabaseThreadFactory(@NonNull FirebaseApp app);
+  protected abstract ThreadFactory getDatabaseThreadFactory();
 
   /**
    * Cleans up any thread-related resources associated with an app. This method is invoked when an
@@ -67,9 +68,10 @@ public abstract class ThreadManager {
   /**
    * A collection of thread pools for running background tasks in the Admin SDK. Primarily
    * consists of an <code>ExecutorService</code> and a <code>ScheduledExecutorService</code>.
-   * The former is used to run most of the async tasks initiated by the SDK (except the tasks
+   * The former is used to run the async tasks initiated by the SDK (except the tasks
    * started by the database code). The latter is used for periodic scheduled tasks started by
-   * the SDK such as proactive token refresh.
+   * the SDK such as proactive token refresh. It is acceptable to use a single
+   * <code>ScheduledExecutorService</code> instance for both purposes.
    */
   public static final class ThreadPools {
     final ListeningExecutorService executor;

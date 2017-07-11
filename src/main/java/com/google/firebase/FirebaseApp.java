@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableScheduledFuture;
+import com.google.firebase.ThreadManager.ThreadPools;
 import com.google.firebase.auth.GoogleOAuthAccessToken;
 import com.google.firebase.internal.ApiFutureImpl;
 import com.google.firebase.internal.AuthStateListener;
@@ -48,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -91,6 +93,8 @@ public class FirebaseApp {
   private final AtomicBoolean deleted = new AtomicBoolean();
   private final List<AuthStateListener> authStateListeners = new ArrayList<>();
   private final Map<String, FirebaseService> services = new HashMap<>();
+  private final AtomicReference<ThreadPools> threadPools = new AtomicReference<>();
+
   private final ThreadManager threadManager;
 
   /**
@@ -370,21 +374,34 @@ public class FirebaseApp {
     });
   }
 
+  private ThreadPools ensureThreadPools() {
+    ThreadPools pools = threadPools.get();
+    if (pools == null) {
+      synchronized (lock) {
+        pools = threadPools.get();
+        if (pools == null) {
+          pools = threadManager.getThreadPools(this);
+        }
+      }
+    }
+    return pools;
+  }
+
   <T> ApiFuture<T> call(Callable<T> command) {
     checkNotNull(command);
-    ListenableFuture<T> future = threadManager.getThreadPools(this).executor.submit(command);
+    ListenableFuture<T> future = ensureThreadPools().executor.submit(command);
     return new ApiFutureImpl<>(future);
   }
 
   <T> ApiFuture<T> schedule(Callable<T> command, long delayMillis) {
     checkNotNull(command);
-    ListenableScheduledFuture<T> future = threadManager.getThreadPools(this)
+    ListenableScheduledFuture<T> future = ensureThreadPools()
         .scheduledExecutor.schedule(command, delayMillis, TimeUnit.MILLISECONDS);
     return new ApiFutureImpl<>(future);
   }
 
-  ThreadManager getThreadManager() {
-    return threadManager;
+  ThreadFactory getDatabaseThreadFactory() {
+    return threadManager.getDatabaseThreadFactory();
   }
 
   boolean isDefaultApp() {

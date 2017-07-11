@@ -90,7 +90,7 @@ public final class ImplFirebaseTrampolines {
   }
 
   public static ThreadFactory getDatabaseThreadFactory(@NonNull FirebaseApp app) {
-    return app.getThreadManager().getDatabaseThreadFactory(app);
+    return app.getDatabaseThreadFactory();
   }
 
 }
