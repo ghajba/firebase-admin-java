@@ -40,6 +40,11 @@ public class FirebaseExecutors {
     }
   }
 
+  /**
+   * An abstract ThreadManager implementation that uses the same set of thread pools
+   * across all active apps. The thread pools are initialized when the first app is initialized,
+   * and they are terminated when the last app is deleted.
+   */
   private abstract static class GlobalThreadManager extends ThreadManager {
 
     private final Map<String, ThreadPools> apps = new HashMap<>();
@@ -133,8 +138,8 @@ public class FirebaseExecutors {
     protected ThreadFactory getDatabaseThreadFactory() {
       GaeThreadFactory threadFactory = GaeThreadFactory.getInstance();
       checkState(threadFactory.isUsingBackgroundThreads(),
-          "Failed to initialize a GAE background thread factory. Realtime database support "
-              + "requires background thread support.");
+          "Failed to initialize a GAE background thread factory. Background thread support "
+              + "is required to access the Realtime database from App Engine environment.");
       return threadFactory;
     }
   }
