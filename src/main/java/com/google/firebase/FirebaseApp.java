@@ -372,13 +372,13 @@ public class FirebaseApp {
 
   <T> ApiFuture<T> call(Callable<T> command) {
     checkNotNull(command);
-    ListenableFuture<T> future = threadManager.getConfig(this).executor.submit(command);
+    ListenableFuture<T> future = threadManager.getThreadPools(this).executor.submit(command);
     return new ApiFutureImpl<>(future);
   }
 
   <T> ApiFuture<T> schedule(Callable<T> command, long delayMillis) {
     checkNotNull(command);
-    ListenableScheduledFuture<T> future = threadManager.getConfig(this)
+    ListenableScheduledFuture<T> future = threadManager.getThreadPools(this)
         .scheduledExecutor.schedule(command, delayMillis, TimeUnit.MILLISECONDS);
     return new ApiFutureImpl<>(future);
   }

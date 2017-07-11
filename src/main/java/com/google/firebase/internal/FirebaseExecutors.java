@@ -42,25 +42,25 @@ public class FirebaseExecutors {
 
   private abstract static class GlobalThreadManager extends ThreadManager {
 
-    private final Map<String, Config> apps = new HashMap<>();
+    private final Map<String, ThreadPools> apps = new HashMap<>();
 
     @Override
-    protected final synchronized Config getConfig(FirebaseApp app) {
-      Config config = apps.get(app.getName());
-      if (config == null) {
+    protected final synchronized ThreadPools getThreadPools(FirebaseApp app) {
+      ThreadPools pools = apps.get(app.getName());
+      if (pools == null) {
         if (apps.isEmpty()) {
           doInit();
         }
-        config = newConfig();
-        apps.put(app.getName(), config);
+        pools = newThreadPools();
+        apps.put(app.getName(), pools);
       }
-      return config;
+      return pools;
     }
 
     @Override
     protected final synchronized void cleanup(FirebaseApp app) {
-      Config config = apps.remove(app.getName());
-      if (config != null && apps.isEmpty()) {
+      ThreadPools pools = apps.remove(app.getName());
+      if (pools != null && apps.isEmpty()) {
         doCleanup();
       }
     }
@@ -71,9 +71,9 @@ public class FirebaseExecutors {
     protected abstract void doInit();
 
     /**
-     * Create a new {@link ThreadManager.Config} for the current environment.
+     * Create a new {@link ThreadManager.ThreadPools} for the current environment.
      */
-    protected abstract Config newConfig();
+    protected abstract ThreadPools newThreadPools();
 
     /**
      * Cleans up the threading resources. Called when the last application is deleted.
@@ -92,8 +92,8 @@ public class FirebaseExecutors {
     }
 
     @Override
-    protected Config newConfig() {
-      return new Config(executor, scheduledExecutor);
+    protected ThreadPools newThreadPools() {
+      return new ThreadPools(executor, scheduledExecutor);
     }
 
     @Override
@@ -105,7 +105,7 @@ public class FirebaseExecutors {
     }
 
     @Override
-    protected ThreadFactory getDatabaseThreadFactory() {
+    protected ThreadFactory getDatabaseThreadFactory(FirebaseApp app) {
       return Executors.defaultThreadFactory();
     }
   }
@@ -119,8 +119,8 @@ public class FirebaseExecutors {
     }
 
     @Override
-    protected Config newConfig() {
-      return new Config(scheduledExecutor, scheduledExecutor);
+    protected ThreadPools newThreadPools() {
+      return new ThreadPools(scheduledExecutor, scheduledExecutor);
     }
 
     @Override
@@ -130,7 +130,7 @@ public class FirebaseExecutors {
     }
 
     @Override
-    protected ThreadFactory getDatabaseThreadFactory() {
+    protected ThreadFactory getDatabaseThreadFactory(FirebaseApp app) {
       GaeThreadFactory threadFactory = GaeThreadFactory.getInstance();
       checkState(threadFactory.isUsingBackgroundThreads(),
           "Failed to initialize a GAE background thread factory");
