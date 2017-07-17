@@ -20,9 +20,8 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.ThreadManager;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -41,101 +40,77 @@ public class FirebaseExecutors {
   }
 
   /**
-   * An abstract ThreadManager implementation that uses the same set of thread pools
-   * across all active apps. The thread pools are initialized when the first app is initialized,
-   * and they are terminated when the last app is deleted.
+   * An abstract ThreadManager implementation that uses the same executor service
+   * across all active apps. The executor service is initialized when the first app is initialized,
+   * and terminated when the last app is deleted.
    */
   private abstract static class GlobalThreadManager extends ThreadManager {
 
-    private final Map<String, ThreadPools> apps = new HashMap<>();
+    private final Set<String> apps = new HashSet<>();
+    private ScheduledExecutorService executorService;
 
     @Override
-    protected final synchronized ThreadPools getThreadPools(FirebaseApp app) {
-      ThreadPools pools = apps.get(app.getName());
-      if (pools == null) {
-        if (apps.isEmpty()) {
-          doInit();
-        }
-        pools = newThreadPools();
-        apps.put(app.getName(), pools);
+    protected synchronized ScheduledExecutorService getExecutor(FirebaseApp app) {
+      if (executorService == null) {
+        executorService = doInit();
+        apps.add(app.getName());
       }
-      return pools;
+      return executorService;
     }
 
     @Override
-    protected final synchronized void cleanup(FirebaseApp app) {
-      ThreadPools pools = apps.remove(app.getName());
-      if (pools != null && apps.isEmpty()) {
-        doCleanup();
+    protected synchronized void releaseExecutor(
+        FirebaseApp app, ScheduledExecutorService executor) {
+      if (apps.remove(app.getName()) && apps.isEmpty()) {
+        doCleanup(executorService);
+        executorService = null;
       }
     }
 
     /**
-     * Initializes the threading resources. Called when the first application is initialized.
+     * Initializes the executor service. Called when the first application is initialized.
      */
-    protected abstract void doInit();
+    protected abstract ScheduledExecutorService doInit();
 
     /**
-     * Create a new {@link ThreadManager.ThreadPools} for the current environment.
+     * Cleans up the executor service. Called when the last application is deleted.
      */
-    protected abstract ThreadPools newThreadPools();
-
-    /**
-     * Cleans up the threading resources. Called when the last application is deleted.
-     */
-    protected abstract void doCleanup();
+    protected abstract void doCleanup(ScheduledExecutorService executorService);
   }
 
   private static class DefaultThreadManager extends GlobalThreadManager {
-    private ExecutorService executor;
-    private ScheduledExecutorService scheduledExecutor;
 
     @Override
-    protected void doInit() {
-      executor = Executors.newCachedThreadPool();
-      scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
+    protected ScheduledExecutorService doInit() {
+      int cores = Runtime.getRuntime().availableProcessors();
+      return Executors.newScheduledThreadPool(cores, getThreadFactory());
     }
 
     @Override
-    protected ThreadPools newThreadPools() {
-      return new ThreadPools(executor, scheduledExecutor);
+    protected void doCleanup(ScheduledExecutorService executorService) {
+      executorService.shutdownNow();
     }
 
     @Override
-    protected void doCleanup() {
-      executor.shutdownNow();
-      scheduledExecutor.shutdownNow();
-      executor = null;
-      scheduledExecutor = null;
-    }
-
-    @Override
-    protected ThreadFactory getDatabaseThreadFactory() {
+    protected ThreadFactory getThreadFactory() {
       return Executors.defaultThreadFactory();
     }
   }
 
   private static class GaeThreadManager extends GlobalThreadManager {
-    private ScheduledExecutorService scheduledExecutor;
 
     @Override
-    protected void doInit() {
-      scheduledExecutor = new GaeScheduledExecutorService("FirebaseDefault");
+    protected ScheduledExecutorService doInit() {
+      return new GaeScheduledExecutorService("FirebaseDefault");
     }
 
     @Override
-    protected ThreadPools newThreadPools() {
-      return new ThreadPools(scheduledExecutor, scheduledExecutor);
+    protected void doCleanup(ScheduledExecutorService executorService) {
+      executorService.shutdownNow();
     }
 
     @Override
-    protected void doCleanup() {
-      scheduledExecutor.shutdownNow();
-      scheduledExecutor = null;
-    }
-
-    @Override
-    protected ThreadFactory getDatabaseThreadFactory() {
+    protected ThreadFactory getThreadFactory() {
       GaeThreadFactory threadFactory = GaeThreadFactory.getInstance();
       checkState(threadFactory.isUsingBackgroundThreads(),
           "Failed to initialize a GAE background thread factory. Background thread support "

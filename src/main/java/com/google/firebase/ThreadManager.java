@@ -16,13 +16,9 @@
 
 package com.google.firebase;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.firebase.internal.NonNull;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 
@@ -36,51 +32,41 @@ import java.util.concurrent.ThreadFactory;
  */
 public abstract class ThreadManager {
 
+  @NonNull
+  final ListeningScheduledExecutorService getListeningExecutor(@NonNull FirebaseApp app) {
+    return MoreExecutors.listeningDecorator(getExecutor(app));
+  }
+
   /**
-   * Returns the thread pools for an app. Implementations may return the same instance of
-   * {@link ThreadPools} for multiple apps. The returned pools are used by all components
-   * of an app except for the realtime database. Database has far stricter and complicated
-   * threading requirements, and thus initializes its own thread pools using the
-   * factory returned by {@link ThreadManager#getDatabaseThreadFactory()}.
+   * Returns the thread pool for an app. Implementations may return the same instance of
+   * <code>ScheduledExecutorService</code> for multiple apps. The returned thread pool is used by
+   * all components of an app except for the realtime database. Database has far stricter and
+   * complicated threading requirements, and thus initializes its own threads using the
+   * factory returned by {@link ThreadManager#getThreadFactory()}.
    *
    * @param app A {@link FirebaseApp} instance.
-   * @return A non-null {@link ThreadPools} instance.
+   * @return A non-null {@link ScheduledExecutorService} instance.
    */
-  protected abstract ThreadPools getThreadPools(@NonNull FirebaseApp app);
+  @NonNull
+  protected abstract ScheduledExecutorService getExecutor(@NonNull FirebaseApp app);
 
   /**
-   * Returns the <code>ThreadFactory</code> to be used for creating threads in the Realtime
-   * database component. This is used to create the run loop, event target and web socket
-   * reader/writer threads.
-   *
-   * @return A non-null <code>ThreadFactory</code>.
-   */
-  protected abstract ThreadFactory getDatabaseThreadFactory();
-
-  /**
-   * Cleans up any thread-related resources associated with an app. This method is invoked when an
+   * Cleans up the thread pool associated with an app. This method is invoked when an
    * app is deleted.
    *
    * @param app A {@link FirebaseApp} instance.
    */
-  protected abstract void cleanup(@NonNull FirebaseApp app);
+  protected abstract void releaseExecutor(
+      @NonNull FirebaseApp app, @NonNull ScheduledExecutorService executor);
 
   /**
-   * A collection of thread pools for running background tasks in the Admin SDK. Primarily
-   * consists of an <code>ExecutorService</code> and a <code>ScheduledExecutorService</code>.
-   * The former is used to run the async tasks initiated by the SDK (except the tasks
-   * started by the database code). The latter is used for periodic scheduled tasks started by
-   * the SDK such as proactive token refresh. It is acceptable to use a single
-   * <code>ScheduledExecutorService</code> instance for both purposes.
+   * Returns the <code>ThreadFactory</code> to be used for creating any additional threads
+   * required by the SDK. This is used mainly to create the run loop, event target and web socket
+   * reader/writer threads of the Realtime Database client.
+   *
+   * @return A non-null <code>ThreadFactory</code>.
    */
-  public static final class ThreadPools {
-    final ListeningExecutorService executor;
-    final ListeningScheduledExecutorService scheduledExecutor;
-
-    public ThreadPools(ExecutorService executor, ScheduledExecutorService scheduledExecutor) {
-      this.executor = MoreExecutors.listeningDecorator(checkNotNull(executor));
-      this.scheduledExecutor = MoreExecutors.listeningDecorator(checkNotNull(scheduledExecutor));
-    }
-  }
+  @NonNull
+  protected abstract ThreadFactory getThreadFactory();
 
 }

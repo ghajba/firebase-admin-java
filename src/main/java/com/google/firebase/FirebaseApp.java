@@ -30,7 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableScheduledFuture;
-import com.google.firebase.ThreadManager.ThreadPools;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.firebase.auth.GoogleOAuthAccessToken;
 import com.google.firebase.internal.ApiFutureImpl;
 import com.google.firebase.internal.AuthStateListener;
@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -93,7 +94,8 @@ public class FirebaseApp {
   private final AtomicBoolean deleted = new AtomicBoolean();
   private final List<AuthStateListener> authStateListeners = new ArrayList<>();
   private final Map<String, FirebaseService> services = new HashMap<>();
-  private final AtomicReference<ThreadPools> threadPools = new AtomicReference<>();
+  private final AtomicReference<ListeningScheduledExecutorService> executorReference =
+      new AtomicReference<>();
 
   private final ThreadManager threadManager;
 
@@ -254,7 +256,6 @@ public class FirebaseApp {
   /** Returns the unique name of this app. */
   @NonNull
   public String getName() {
-    checkNotDeleted();
     return name;
   }
 
@@ -304,6 +305,16 @@ public class FirebaseApp {
       services.clear();
       authStateListeners.clear();
       tokenRefresher.cleanup();
+
+      // Clean up and terminate the thread pool
+      ScheduledExecutorService executor = executorReference.get();
+      if (executor != null) {
+        threadManager.releaseExecutor(this, executor);
+        executorReference.set(null);
+      }
+
+      // Clean up local token cache
+      current.set(null);
     }
 
     synchronized (appsLock) {
@@ -331,6 +342,7 @@ public class FirebaseApp {
     List<AuthStateListener> listenersCopy = null;
     if (refreshRequired(currentToken, forceRefresh)) {
       synchronized (lock) {
+        checkNotDeleted();
         currentToken = current.get();
         if (refreshRequired(currentToken, forceRefresh)) {
           currentToken = options.getCredential().getAccessToken();
@@ -374,35 +386,36 @@ public class FirebaseApp {
     });
   }
 
-  private ThreadPools ensureThreadPools() {
-    ThreadPools pools = threadPools.get();
-    if (pools == null) {
+  private ListeningScheduledExecutorService ensureThreadPools() {
+    ListeningScheduledExecutorService executor = executorReference.get();
+    if (executor == null) {
       synchronized (lock) {
-        pools = threadPools.get();
-        if (pools == null) {
-          pools = threadManager.getThreadPools(this);
-          threadPools.set(pools);
+        checkNotDeleted();
+        executor = executorReference.get();
+        if (executor == null) {
+          executor = threadManager.getListeningExecutor(this);
+          executorReference.set(executor);
         }
       }
     }
-    return pools;
+    return executor;
   }
 
   <T> ApiFuture<T> call(Callable<T> command) {
     checkNotNull(command);
-    ListenableFuture<T> future = ensureThreadPools().executor.submit(command);
+    ListenableFuture<T> future = ensureThreadPools().submit(command);
     return new ApiFutureImpl<>(future);
   }
 
   <T> ApiFuture<T> schedule(Callable<T> command, long delayMillis) {
     checkNotNull(command);
     ListenableScheduledFuture<T> future = ensureThreadPools()
-        .scheduledExecutor.schedule(command, delayMillis, TimeUnit.MILLISECONDS);
+        .schedule(command, delayMillis, TimeUnit.MILLISECONDS);
     return new ApiFutureImpl<>(future);
   }
 
   ThreadFactory getDatabaseThreadFactory() {
-    return threadManager.getDatabaseThreadFactory();
+    return threadManager.getThreadFactory();
   }
 
   boolean isDefaultApp() {

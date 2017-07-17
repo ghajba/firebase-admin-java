@@ -193,6 +193,7 @@ public class FirebaseAppTest {
             "delete",
             "equals",
             "getListeners",
+            "getName",
             "getPersistenceKey",
             "hashCode",
             "isDefaultApp",
