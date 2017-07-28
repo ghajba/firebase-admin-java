@@ -23,9 +23,10 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.firebase.auth.FirebaseCredential;
 import com.google.firebase.auth.FirebaseCredentials;
 import com.google.firebase.auth.TestOnlyImplFirebaseAuthTrampolines;
@@ -69,11 +70,13 @@ public class FirebaseOptionsTest {
     assertSame(httpTransport, firebaseOptions.getHttpTransport());
     TestOnlyImplFirebaseAuthTrampolines.getCertificate(firebaseOptions.getCredential())
         .addOnSuccessListener(
-            new OnSuccessListener<GoogleCredential>() {
+            new OnSuccessListener<GoogleCredentials>() {
               @Override
-              public void onSuccess(GoogleCredential googleCredential) {
+              public void onSuccess(GoogleCredentials googleCredential) {
+                ServiceAccountCredentials baseCredential =
+                    (ServiceAccountCredentials) googleCredential;
                 assertEquals(
-                    ServiceAccount.EDITOR.getEmail(), googleCredential.getServiceAccountId());
+                    ServiceAccount.EDITOR.getEmail(), baseCredential.getClientEmail());
                 semaphore.release();
               }
             });
@@ -91,14 +94,16 @@ public class FirebaseOptionsTest {
     assertNotNull(firebaseOptions.getHttpTransport());
     TestOnlyImplFirebaseAuthTrampolines.getCertificate(firebaseOptions.getCredential())
         .addOnSuccessListener(
-            new OnSuccessListener<GoogleCredential>() {
+            new OnSuccessListener<GoogleCredentials>() {
               @Override
-              public void onSuccess(GoogleCredential googleCredential) {
+              public void onSuccess(GoogleCredentials googleCredential) {
+                ServiceAccountCredentials baseCredential =
+                    (ServiceAccountCredentials) googleCredential;
                 try {
                   assertEquals(
-                      GoogleCredential.fromStream(ServiceAccount.EDITOR.asStream())
-                          .getServiceAccountId(),
-                      googleCredential.getServiceAccountId());
+                      ServiceAccountCredentials.fromStream(ServiceAccount.EDITOR.asStream())
+                          .getClientEmail(),
+                      baseCredential.getClientEmail());
                   semaphore.release();
                 } catch (IOException e) {
                   fail();

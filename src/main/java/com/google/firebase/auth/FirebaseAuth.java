@@ -23,6 +23,8 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.auth.oauth2.GooglePublicKeysManager;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.util.Clock;
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.firebase.FirebaseApp;
@@ -136,19 +138,19 @@ public class FirebaseAuth {
                   + "createCustomToken()"));
     }
 
-    return ((FirebaseCredentials.CertCredential) credential)
-        .getCertificate()
+    return Tasks.forResult(((FirebaseCredentials.CertCredential) credential).getGoogleCredentials())
         .continueWith(
-            new Continuation<GoogleCredential, String>() {
+            new Continuation<GoogleCredentials, String>() {
               @Override
-              public String then(@NonNull Task<GoogleCredential> task) throws Exception {
-                GoogleCredential baseCredential = task.getResult();
+              public String then(@NonNull Task<GoogleCredentials> task) throws Exception {
+                ServiceAccountCredentials baseCredential =
+                    (ServiceAccountCredentials) task.getResult();
                 FirebaseTokenFactory tokenFactory = FirebaseTokenFactory.getInstance();
                 return tokenFactory.createSignedCustomAuthTokenForUser(
                     uid,
                     developerClaims,
-                    baseCredential.getServiceAccountId(),
-                    baseCredential.getServiceAccountPrivateKey());
+                    baseCredential.getClientEmail(),
+                    baseCredential.getPrivateKey());
               }
             });
   }

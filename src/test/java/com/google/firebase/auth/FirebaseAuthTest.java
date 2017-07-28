@@ -26,7 +26,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.google.api.client.googleapis.testing.auth.oauth2.MockTokenServerTransport;
-import com.google.api.client.googleapis.util.Utils;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.firebase.FirebaseApp;
@@ -118,7 +117,7 @@ public class FirebaseAuthTest {
     TestUtils.setEnvironmentVariables(environmentVariables);
     credentialsFile.deleteOnExit();
 
-    return FirebaseCredentials.applicationDefault(transport, Utils.getDefaultJsonFactory());
+    return FirebaseCredentials.applicationDefault(transport);
   }
 
   private static FirebaseCredential createRefreshTokenCredential()
@@ -137,7 +136,7 @@ public class FirebaseAuthTest {
         new ByteArrayInputStream(secretJson.toString(0).getBytes("UTF-8"));
 
     return FirebaseCredentials.fromRefreshToken(
-        refreshTokenStream, transport, Utils.getDefaultJsonFactory());
+        refreshTokenStream, transport);
   }
 
   private static FirebaseCredential createCertificateCredential() throws IOException {
@@ -145,7 +144,7 @@ public class FirebaseAuthTest {
     transport.addServiceAccount(ServiceAccount.EDITOR.getEmail(), ACCESS_TOKEN);
 
     return FirebaseCredentials.fromCertificate(
-        ServiceAccount.EDITOR.asStream(), transport, Utils.getDefaultJsonFactory());
+        ServiceAccount.EDITOR.asStream(), transport);
   }
 
   @Before
