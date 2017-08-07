@@ -27,6 +27,8 @@ import static org.junit.Assert.fail;
 
 import com.google.api.client.googleapis.testing.auth.oauth2.MockTokenServerTransport;
 import com.google.api.client.json.gson.GsonFactory;
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.common.collect.ImmutableMap;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
@@ -294,9 +296,10 @@ public class FirebaseAuthTest {
 
   @Test
   public void testCredentialCertificateRequired() throws Exception {
+    GoogleCredentials googleCredentials = TestOnlyImplFirebaseTrampolines
+        .getCredential(firebaseOptions).getGoogleCredentials();
     Assume.assumeFalse("Skipping testCredentialCertificateRequired for cert credential",
-        isCertCredential);
-
+        googleCredentials instanceof ServiceAccountCredentials);
 
     FirebaseApp app =
         FirebaseApp.initializeApp(firebaseOptions, "testCredentialCertificateRequired");

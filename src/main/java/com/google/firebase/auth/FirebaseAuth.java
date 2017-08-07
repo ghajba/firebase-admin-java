@@ -19,7 +19,6 @@ package com.google.firebase.auth;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.auth.oauth2.GooglePublicKeysManager;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.util.Clock;
@@ -131,26 +130,25 @@ public class FirebaseAuth {
   public Task<String> createCustomToken(
       final String uid, final Map<String, Object> developerClaims) {
     FirebaseCredential credential = ImplFirebaseTrampolines.getCredential(firebaseApp);
-    if (!(credential instanceof FirebaseCredentials.CertCredential)) {
+    GoogleCredentials googleCredentials = credential.getGoogleCredentials();
+    if (!(googleCredentials instanceof ServiceAccountCredentials)) {
       return Tasks.forException(
           new FirebaseException(
               "Must initialize FirebaseApp with a certificate credential to call "
                   + "createCustomToken()"));
     }
 
-    return Tasks.forResult(((FirebaseCredentials.CertCredential) credential).getGoogleCredentials())
+    return Tasks.forResult((ServiceAccountCredentials) googleCredentials)
         .continueWith(
-            new Continuation<GoogleCredentials, String>() {
+            new Continuation<ServiceAccountCredentials, String>() {
               @Override
-              public String then(@NonNull Task<GoogleCredentials> task) throws Exception {
-                ServiceAccountCredentials baseCredential =
-                    (ServiceAccountCredentials) task.getResult();
+              public String then(@NonNull Task<ServiceAccountCredentials> task) throws Exception {
                 FirebaseTokenFactory tokenFactory = FirebaseTokenFactory.getInstance();
                 return tokenFactory.createSignedCustomAuthTokenForUser(
                     uid,
                     developerClaims,
-                    baseCredential.getClientEmail(),
-                    baseCredential.getPrivateKey());
+                    task.getResult().getClientEmail(),
+                    task.getResult().getPrivateKey());
               }
             });
   }

@@ -16,6 +16,7 @@
 
 package com.google.firebase;
 
+import com.google.firebase.auth.FirebaseCredential;
 import com.google.firebase.internal.GetTokenResult;
 import com.google.firebase.tasks.Task;
 
@@ -38,5 +39,9 @@ public final class TestOnlyImplFirebaseTrampolines {
 
   public static Task<GetTokenResult> getToken(FirebaseApp app, boolean forceRefresh) {
     return app.getToken(forceRefresh);
+  }
+
+  public static FirebaseCredential getCredential(FirebaseOptions options) {
+    return options.getCredential();
   }
 }

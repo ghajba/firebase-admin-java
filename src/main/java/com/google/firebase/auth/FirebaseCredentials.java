@@ -18,15 +18,12 @@ package com.google.firebase.auth;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-
 import com.google.api.client.googleapis.util.Utils;
 import com.google.api.client.http.HttpTransport;
 import com.google.auth.http.HttpTransportFactory;
-import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.auth.oauth2.UserCredentials;
-import com.google.common.collect.ImmutableList;
 import com.google.common.io.CharStreams;
 import com.google.firebase.internal.NonNull;
 import com.google.firebase.tasks.Task;
@@ -37,9 +34,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
-import java.util.concurrent.Callable;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -49,16 +44,11 @@ import org.json.JSONObject;
  */
 public class FirebaseCredentials {
 
-  private static final List<String> FIREBASE_SCOPES =
-      ImmutableList.of(
-          "https://www.googleapis.com/auth/firebase.database",
-          "https://www.googleapis.com/auth/userinfo.email",
-          "https://www.googleapis.com/auth/identitytoolkit");
-
   private FirebaseCredentials() {
   }
 
   private static String streamToString(InputStream inputStream) throws IOException {
+    checkNotNull(inputStream, "InputStream must not be null");
     InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
     return CharStreams.toString(reader);
   }
@@ -78,8 +68,8 @@ public class FirebaseCredentials {
    *     be used to authenticate the SDK.
    */
   @NonNull
-  public static FirebaseCredential applicationDefault() {
-    return DefaultCredentialsHolder.getInstance();
+  public static FirebaseCredential applicationDefault() throws IOException {
+    return applicationDefault(Utils.getDefaultTransport());
   }
 
   /**
@@ -100,7 +90,7 @@ public class FirebaseCredentials {
    *     be used to authenticate the SDK.
    */
   @NonNull
-  public static FirebaseCredential applicationDefault(HttpTransport transport) {
+  public static FirebaseCredential applicationDefault(HttpTransport transport) throws IOException {
     return new ApplicationDefaultCredential(transport);
   }
 
@@ -142,7 +132,21 @@ public class FirebaseCredentials {
   @NonNull
   public static FirebaseCredential fromCertificate(InputStream serviceAccount,
       HttpTransport transport) throws IOException {
-    return new CertCredential(serviceAccount, transport);
+    // Consume the stream, and parse the content here since we need to extract the project_id.
+    // We can drop this if https://github.com/google/google-auth-library-java/issues/117 gets
+    // fixed.
+    String jsonData = streamToString(serviceAccount);
+    ServiceAccountCredentials credentials = ServiceAccountCredentials.fromStream(
+        new ByteArrayInputStream(jsonData.getBytes("UTF-8")),
+        wrap(transport));
+    JSONObject json = new JSONObject(jsonData);
+    String projectId;
+    try {
+      projectId = json.getString("project_id");
+    } catch (JSONException e) {
+      throw new IOException("Failed to parse service account: 'project_id' must be set", e);
+    }
+    return new CertCredential(credentials, projectId);
   }
 
   /**
@@ -186,33 +190,6 @@ public class FirebaseCredentials {
     return new RefreshTokenCredential(refreshToken, transport);
   }
 
-  /**
-   * Helper class that implements {@link FirebaseCredential} on top of {@link GoogleCredentials} and
-   * provides caching of access tokens and credentials.
-   */
-  abstract static class BaseCredential implements FirebaseCredential {
-
-    abstract GoogleCredentials getGoogleCredentials() throws IOException;
-
-    /**
-     * Returns an access token for this credential. Does not cache tokens.
-     */
-    @Override
-    public final Task<GoogleOAuthAccessToken> getAccessToken() {
-      return Tasks.call(new Callable<GoogleOAuthAccessToken>() {
-        @Override
-        public GoogleOAuthAccessToken call() throws Exception {
-          return fetchToken(getGoogleCredentials());
-        }
-      });
-    }
-
-    // To be overridden during tests
-    protected GoogleOAuthAccessToken fetchToken(GoogleCredentials credentials) throws IOException {
-      return newAccessToken(credentials.refreshAccessToken());
-    }
-  }
-
   private static HttpTransportFactory wrap(final HttpTransport transport) {
     checkNotNull(transport, "HttpTransport must not be null");
     return new HttpTransportFactory() {
@@ -223,29 +200,13 @@ public class FirebaseCredentials {
     };
   }
 
-  static class CertCredential extends BaseCredential {
+  static class CertCredential extends FirebaseCredential {
 
     private final String projectId;
-    private final GoogleCredentials googleCredentials;
 
-    CertCredential(InputStream inputStream, HttpTransport transport) throws IOException {
-      String jsonData = streamToString(checkNotNull(inputStream));
-      byte[] jsonBytes = jsonData.getBytes("UTF-8");
-      this.googleCredentials = ServiceAccountCredentials
-          .fromStream(new ByteArrayInputStream(jsonBytes), wrap(transport))
-          .createScoped(FIREBASE_SCOPES);
-
-      JSONObject jsonObject = new JSONObject(jsonData);
-      try {
-        this.projectId = jsonObject.getString("project_id");
-      } catch (JSONException e) {
-        throw new IOException("Failed to parse service account: 'project_id' must be set", e);
-      }
-    }
-
-    @Override
-    GoogleCredentials getGoogleCredentials() {
-      return googleCredentials;
+    CertCredential(ServiceAccountCredentials credentials, String projectId) {
+      super(credentials);
+      this.projectId = projectId;
     }
 
     Task<String> getProjectId() {
@@ -253,53 +214,17 @@ public class FirebaseCredentials {
     }
   }
 
-  static class ApplicationDefaultCredential extends BaseCredential {
+  static class ApplicationDefaultCredential extends FirebaseCredential {
 
-    private final HttpTransport transport;
-
-    ApplicationDefaultCredential(HttpTransport transport) {
-      this.transport = transport;
-    }
-
-    @Override
-    GoogleCredentials getGoogleCredentials() throws IOException {
-      // Defer initialization of GoogleCredentials until they are necessary. This may make RPC
-      // calls in some environments. These credentials get cached by the underlying auth library.
-      return GoogleCredentials.getApplicationDefault(wrap(transport))
-          .createScoped(FIREBASE_SCOPES);
+    ApplicationDefaultCredential(HttpTransport transport) throws IOException {
+      super(GoogleCredentials.getApplicationDefault(wrap(transport)));
     }
   }
 
-  static class RefreshTokenCredential extends BaseCredential {
-
-    private final GoogleCredentials googleCredentials;
+  static class RefreshTokenCredential extends FirebaseCredential {
 
     RefreshTokenCredential(InputStream inputStream, HttpTransport transport) throws IOException {
-      this.googleCredentials = UserCredentials.fromStream(inputStream, wrap(transport))
-          .createScoped(FIREBASE_SCOPES);
-    }
-
-    @Override
-    GoogleCredentials getGoogleCredentials() {
-      return googleCredentials;
-    }
-  }
-
-  static GoogleOAuthAccessToken newAccessToken(AccessToken accessToken) {
-    checkNotNull(accessToken);
-    return new GoogleOAuthAccessToken(accessToken.getTokenValue(),
-        accessToken.getExpirationTime().getTime());
-  }
-
-  private static class DefaultCredentialsHolder {
-
-    static FirebaseCredential INSTANCE;
-
-    static synchronized FirebaseCredential getInstance() {
-      if (INSTANCE == null) {
-        INSTANCE = applicationDefault(Utils.getDefaultTransport());
-      }
-      return INSTANCE;
+      super(UserCredentials.fromStream(inputStream, wrap(transport)));
     }
   }
 

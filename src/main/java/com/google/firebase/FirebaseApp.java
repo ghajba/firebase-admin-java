@@ -71,7 +71,6 @@ public class FirebaseApp {
   private static final Map<String, FirebaseApp> instances = new HashMap<>();
 
   public static final String DEFAULT_APP_NAME = "[DEFAULT]";
-  private static final long TOKEN_REFRESH_INTERVAL_MILLIS = TimeUnit.MINUTES.toMillis(55);
 
   static final TokenRefresher.Factory DEFAULT_TOKEN_REFRESHER_FACTORY =
       new TokenRefresher.Factory();

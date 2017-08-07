@@ -21,12 +21,10 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.util.Clock;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
-import com.google.firebase.FirebaseException;
 import com.google.firebase.tasks.Task;
 import com.google.firebase.tasks.Tasks;
 
 import java.io.IOException;
-import java.util.concurrent.Callable;
 
 /**
  * Provides trampolines into package-private Auth APIs used by components of Firebase
@@ -50,16 +48,7 @@ public final class TestOnlyImplFirebaseAuthTrampolines {
 
   /* FirebaseCredentials */
   public static Task<GoogleCredentials> getCertificate(final FirebaseCredential credential) {
-    if (credential instanceof FirebaseCredentials.BaseCredential) {
-      return Tasks.call(new Callable<GoogleCredentials>() {
-        @Override
-        public GoogleCredentials call() throws Exception {
-          return ((FirebaseCredentials.BaseCredential) credential).getGoogleCredentials();
-        }
-      });
-    } else {
-      return Tasks.forException(new FirebaseException("Cannot convert to BaseCredential"));
-    }
+    return Tasks.forResult(credential.getGoogleCredentials());
   }
 
   /* FirebaseCredentials */

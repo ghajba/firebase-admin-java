@@ -22,7 +22,6 @@ import com.google.api.client.googleapis.testing.auth.oauth2.MockTokenServerTrans
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.collect.ImmutableMap;
-import com.google.firebase.auth.FirebaseCredentials.BaseCredential;
 import com.google.firebase.tasks.Tasks;
 import com.google.firebase.testing.ServiceAccount;
 import com.google.firebase.testing.TestUtils;
@@ -36,7 +35,6 @@ import java.nio.file.Files;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.Assert;
@@ -63,12 +61,6 @@ public class FirebaseCredentialsTest {
   @Test(expected = NullPointerException.class)
   public void testNullRefreshToken() throws IOException {
     FirebaseCredentials.fromRefreshToken(null);
-  }
-
-  @Test
-  public void defaultCredentialIsCached() throws IOException {
-    Assert.assertEquals(
-        FirebaseCredentials.applicationDefault(), FirebaseCredentials.applicationDefault());
   }
 
   @Test
@@ -248,9 +240,11 @@ public class FirebaseCredentialsTest {
 
     private String accessToken;
     private long expiryTime;
+    private int fetchCount = 0;
 
     @Override
     public AccessToken refreshAccessToken() throws IOException {
+      fetchCount++;
       return new AccessToken(accessToken, new Date(expiryTime));
     }
   }
@@ -264,7 +258,7 @@ public class FirebaseCredentialsTest {
 
     for (long i = 0; i < 10; i++) {
       Assert.assertEquals(ACCESS_TOKEN, Tasks.await(credential.getAccessToken()).getAccessToken());
-      Assert.assertEquals(i + 1, credential.getFetchCount());
+      Assert.assertEquals(i + 1, googleCredential.fetchCount);
     }
   }
 
@@ -283,31 +277,10 @@ public class FirebaseCredentialsTest {
     }
   }
 
-  private static class TestCredential extends BaseCredential {
-
-    private final AtomicInteger fetchCount = new AtomicInteger(0);
-    private final GoogleCredentials googleCredential;
+  private static class TestCredential extends FirebaseCredential {
 
     TestCredential(GoogleCredentials googleCredential) {
-      this.googleCredential = googleCredential;
-    }
-
-    @Override
-    GoogleCredentials getGoogleCredentials() {
-      return googleCredential;
-    }
-
-    @Override
-    protected GoogleOAuthAccessToken fetchToken(GoogleCredentials credential) throws IOException {
-      try {
-        return FirebaseCredentials.newAccessToken(credential.refreshAccessToken());
-      } finally {
-        fetchCount.incrementAndGet();
-      }
-    }
-
-    int getFetchCount() {
-      return fetchCount.get();
+      super(googleCredential);
     }
   }
 }

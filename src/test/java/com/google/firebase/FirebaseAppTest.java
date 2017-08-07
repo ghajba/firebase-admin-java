@@ -29,6 +29,8 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.google.auth.oauth2.AccessToken;
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.base.Defaults;
 import com.google.common.io.BaseEncoding;
 import com.google.firebase.FirebaseApp.Clock;
@@ -36,7 +38,6 @@ import com.google.firebase.FirebaseApp.TokenRefresher;
 import com.google.firebase.FirebaseOptions.Builder;
 import com.google.firebase.auth.FirebaseCredential;
 import com.google.firebase.auth.FirebaseCredentials;
-import com.google.firebase.auth.GoogleOAuthAccessToken;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.internal.AuthStateListener;
 import com.google.firebase.internal.GetTokenResult;
@@ -53,6 +54,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -402,27 +404,32 @@ public class FirebaseAppTest {
     new FirebaseException("");
   }
 
+  private static class MockGoogleCredentials extends GoogleCredentials {
 
-  private static class MockFirebaseCredential implements FirebaseCredential {
-    @Override
-    public Task<GoogleOAuthAccessToken> getAccessToken() {
-      return Tasks.forResult(new GoogleOAuthAccessToken(UUID.randomUUID().toString(),
-          System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1)));
-    }
-  }
+    private final Clock clock;
 
-  private static class ClockedMockFirebaseCredential implements FirebaseCredential {
-
-    private final TestClock clock;
-
-    ClockedMockFirebaseCredential(TestClock clock) {
+    MockGoogleCredentials(Clock clock) {
       this.clock = clock;
     }
 
     @Override
-    public Task<GoogleOAuthAccessToken> getAccessToken() {
-      return Tasks.forResult(new GoogleOAuthAccessToken(UUID.randomUUID().toString(),
-          clock.now() + TimeUnit.HOURS.toMillis(1)));
+    public AccessToken refreshAccessToken() throws IOException {
+      Date expiry = new Date(clock.now() + TimeUnit.HOURS.toMillis(1));
+      return new AccessToken(UUID.randomUUID().toString(), expiry);
+    }
+  }
+
+  private static class MockFirebaseCredential extends FirebaseCredential {
+
+    MockFirebaseCredential() {
+      super(new MockGoogleCredentials(new Clock()));
+    }
+  }
+
+  private static class ClockedMockFirebaseCredential extends FirebaseCredential {
+
+    ClockedMockFirebaseCredential(TestClock clock) {
+      super(new MockGoogleCredentials(clock));
     }
   }
 
