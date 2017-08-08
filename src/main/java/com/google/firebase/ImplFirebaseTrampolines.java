@@ -17,12 +17,10 @@
 package com.google.firebase;
 
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.OAuth2Credentials.CredentialsChangedListener;
 import com.google.firebase.auth.FirebaseCredential;
-import com.google.firebase.internal.AuthStateListener;
 import com.google.firebase.internal.FirebaseService;
-import com.google.firebase.internal.GetTokenResult;
 import com.google.firebase.internal.NonNull;
-import com.google.firebase.tasks.Task;
 
 /**
  * Provides trampolines into package-private APIs used by components of Firebase. Intentionally
@@ -55,9 +53,9 @@ public final class ImplFirebaseTrampolines {
     return FirebaseApp.getPersistenceKey(name, options);
   }
 
-  public static void addAuthStateChangeListener(
-      @NonNull FirebaseApp app, @NonNull AuthStateListener listener) {
-    app.addAuthStateListener(listener);
+  public static void addCredentialsChangesListener(
+      @NonNull FirebaseApp app, @NonNull CredentialsChangedListener listener) {
+    app.addCredentialsChangedListener(listener);
   }
 
   public static <T extends FirebaseService> T getService(

@@ -424,7 +424,7 @@ public class RulesTestIT {
     DatabaseReference ref = root.child(writer.getPath().toString());
 
     String token = Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(masterApp, true),
-        TestUtils.TEST_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).getToken();
+        TestUtils.TEST_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     provider.setToken(token);
 
     DatabaseError err = new WriteFuture(ref.child("any_auth"), true).timedGet();

@@ -18,12 +18,13 @@ package com.google.firebase.database.core;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.OAuth2Credentials;
+import com.google.auth.oauth2.OAuth2Credentials.CredentialsChangedListener;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.ImplFirebaseTrampolines;
 import com.google.firebase.database.util.GAuthToken;
-import com.google.firebase.internal.AuthStateListener;
-import com.google.firebase.internal.GetTokenResult;
 
 import java.io.IOException;
 import java.util.Map;
@@ -39,16 +40,15 @@ public class JvmAuthTokenProvider implements AuthTokenProvider {
     this.firebaseApp = firebaseApp;
   }
 
-  private static String wrapOAuthToken(FirebaseApp firebaseApp, GetTokenResult result) {
-    String oauthToken = result.getToken();
-    if (oauthToken == null) {
+  private static String wrapOAuthToken(FirebaseApp firebaseApp, AccessToken result) {
+    if (result == null) {
       // This shouldn't happen in the actual production SDK, but can happen in tests.
       return null;
-    } else {
-      Map<String, Object> authVariable = firebaseApp.getOptions().getDatabaseAuthVariableOverride();
-      GAuthToken googleAuthToken = new GAuthToken(oauthToken, authVariable);
-      return googleAuthToken.serializeToString();
     }
+    Map<String, Object> authVariable = firebaseApp.getOptions()
+        .getDatabaseAuthVariableOverride();
+    GAuthToken googleAuthToken = new GAuthToken(result.getTokenValue(), authVariable);
+    return googleAuthToken.serializeToString();
   }
 
   @Override
@@ -56,7 +56,7 @@ public class JvmAuthTokenProvider implements AuthTokenProvider {
     GoogleCredentials credentials = ImplFirebaseTrampolines.getGoogleCredentials(firebaseApp);
     try {
       credentials.getRequestMetadata();
-      listener.onSuccess(credentials.getAccessToken().getTokenValue());
+      listener.onSuccess(wrapOAuthToken(firebaseApp, credentials.getAccessToken()));
     } catch (IOException e) {
       listener.onError(e.toString());
     }
@@ -64,11 +64,9 @@ public class JvmAuthTokenProvider implements AuthTokenProvider {
 
   @Override
   public void addTokenChangeListener(TokenChangeListener listener) {
-    ImplFirebaseTrampolines.addAuthStateChangeListener(firebaseApp, wrap(listener));
-  }
-
-  private AuthStateListener wrap(TokenChangeListener listener) {
-    return new TokenChangeListenerWrapper(listener, firebaseApp, executorService);
+    CredentialsChangedListener credentialsChangedListener = new TokenChangeListenerWrapper(
+        listener, firebaseApp, executorService);
+    ImplFirebaseTrampolines.addCredentialsChangesListener(firebaseApp, credentialsChangedListener);
   }
 
   /**
@@ -76,7 +74,7 @@ public class JvmAuthTokenProvider implements AuthTokenProvider {
    * comparisons are delegated to the TokenChangeListener so that listener addition and removal will
    * work as expected in FirebaseApp.
    */
-  private static class TokenChangeListenerWrapper implements AuthStateListener {
+  private static class TokenChangeListenerWrapper implements CredentialsChangedListener {
 
     private final TokenChangeListener listener;
     private final FirebaseApp firebaseApp;
@@ -92,14 +90,15 @@ public class JvmAuthTokenProvider implements AuthTokenProvider {
     }
 
     @Override
-    public void onAuthStateChanged(final GetTokenResult tokenResult) {
+    public void onChanged(OAuth2Credentials credentials) throws IOException {
       // Notify the TokenChangeListener on database's thread pool to make sure that
       // all database work happens on database worker threads.
+      final AccessToken accessToken = credentials.getAccessToken();
       executorService.execute(
           new Runnable() {
             @Override
             public void run() {
-              listener.onTokenChange(wrapOAuthToken(firebaseApp, tokenResult));
+              listener.onTokenChange(wrapOAuthToken(firebaseApp, accessToken));
             }
           });
     }

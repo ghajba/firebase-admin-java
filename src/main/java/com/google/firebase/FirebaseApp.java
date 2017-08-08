@@ -23,7 +23,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
-import com.google.auth.oauth2.OAuth2Credentials;
 import com.google.auth.oauth2.OAuth2Credentials.CredentialsChangedListener;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -31,10 +30,8 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
-import com.google.firebase.internal.AuthStateListener;
 import com.google.firebase.internal.FirebaseAppStore;
 import com.google.firebase.internal.FirebaseService;
-import com.google.firebase.internal.GetTokenResult;
 import com.google.firebase.internal.NonNull;
 import com.google.firebase.internal.Nullable;
 
@@ -298,24 +295,19 @@ public class FirebaseApp {
     return DEFAULT_APP_NAME.equals(getName());
   }
 
-  void addAuthStateListener(@NonNull final AuthStateListener listener) {
+  void addCredentialsChangedListener(@NonNull final CredentialsChangedListener listener) {
     synchronized (lock) {
       checkNotDeleted();
       GoogleCredentials googleCredentials = options.getCredential().getGoogleCredentials();
-      CredentialsChangedListener changeListener = new CredentialsChangedListener() {
-        @Override
-        public void onChanged(OAuth2Credentials oauth) throws IOException {
-          GetTokenResult result = new GetTokenResult(
-              oauth.getAccessToken().getTokenValue());
-          listener.onAuthStateChanged(result);
-        }
-      };
-
       AccessToken current = googleCredentials.getAccessToken();
       if (current != null) {
-        listener.onAuthStateChanged(new GetTokenResult(current.getTokenValue()));
+        try {
+          listener.onChanged(googleCredentials);
+        } catch (IOException e) {
+          logger.warn("Failed to notify CredentialsChangedListener", e);
+        }
       }
-      googleCredentials.addChangeListener(changeListener);
+      googleCredentials.addChangeListener(listener);
     }
   }
 

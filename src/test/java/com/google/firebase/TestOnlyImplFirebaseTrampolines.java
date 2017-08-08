@@ -19,7 +19,6 @@ package com.google.firebase;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.auth.FirebaseCredential;
-import com.google.firebase.internal.GetTokenResult;
 import com.google.firebase.tasks.Task;
 import com.google.firebase.tasks.Tasks;
 import java.io.IOException;
@@ -41,7 +40,7 @@ public final class TestOnlyImplFirebaseTrampolines {
     FirebaseApp.clearInstancesForTest();
   }
 
-  public static Task<GetTokenResult> getToken(FirebaseApp app, boolean forceRefresh) {
+  public static Task<String> getToken(FirebaseApp app, boolean forceRefresh) {
     GoogleCredentials googleCredentials = ImplFirebaseTrampolines.getGoogleCredentials(app);
     try {
       if (forceRefresh) {
@@ -50,7 +49,7 @@ public final class TestOnlyImplFirebaseTrampolines {
         googleCredentials.getRequestMetadata();
       }
       AccessToken token = googleCredentials.getAccessToken();
-      return Tasks.forResult(new GetTokenResult(token.getTokenValue()));
+      return Tasks.forResult(token.getTokenValue());
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

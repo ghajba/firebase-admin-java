@@ -166,8 +166,7 @@ public class FirebaseAuthTest {
     assertNotNull(defaultAuth);
     assertSame(defaultAuth, FirebaseAuth.getInstance());
     String token =
-        Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(FirebaseApp.getInstance(), false))
-            .getToken();
+        Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(FirebaseApp.getInstance(), false));
     Assert.assertTrue(!token.isEmpty());
   }
 
@@ -177,7 +176,7 @@ public class FirebaseAuthTest {
     FirebaseAuth auth = FirebaseAuth.getInstance(app);
     assertNotNull(auth);
     assertSame(auth, FirebaseAuth.getInstance(app));
-    String token = Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(app, false)).getToken();
+    String token = Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(app, false));
     Assert.assertTrue(!token.isEmpty());
   }
 
@@ -240,7 +239,7 @@ public class FirebaseAuthTest {
             .build();
     FirebaseApp app = FirebaseApp.initializeApp(options, "testGetAppWithUid");
     assertEquals("uid1", app.getOptions().getDatabaseAuthVariableOverride().get("uid"));
-    String token = Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(app, false)).getToken();
+    String token = Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(app, false));
     Assert.assertTrue(!token.isEmpty());
   }
 
@@ -291,7 +290,7 @@ public class FirebaseAuthTest {
             .build();
     FirebaseApp app = FirebaseApp.initializeApp(options, "testCreateCustomToken");
     Assert.assertNotNull(
-        Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(app, false)).getToken());
+        Tasks.await(TestOnlyImplFirebaseTrampolines.getToken(app, false)));
   }
 
   @Test
