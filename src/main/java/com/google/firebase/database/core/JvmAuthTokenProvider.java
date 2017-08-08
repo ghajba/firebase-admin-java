@@ -18,15 +18,14 @@ package com.google.firebase.database.core;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.ImplFirebaseTrampolines;
 import com.google.firebase.database.util.GAuthToken;
 import com.google.firebase.internal.AuthStateListener;
 import com.google.firebase.internal.GetTokenResult;
-import com.google.firebase.internal.NonNull;
-import com.google.firebase.tasks.OnCompleteListener;
-import com.google.firebase.tasks.Task;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -54,29 +53,19 @@ public class JvmAuthTokenProvider implements AuthTokenProvider {
 
   @Override
   public void getToken(boolean forceRefresh, final GetTokenCompletionListener listener) {
-    ImplFirebaseTrampolines.getToken(firebaseApp, forceRefresh)
-        .addOnCompleteListener(
-            this.executorService,
-            new OnCompleteListener<GetTokenResult>() {
-              @Override
-              public void onComplete(@NonNull Task<GetTokenResult> task) {
-                if (task.isSuccessful()) {
-                  listener.onSuccess(wrapOAuthToken(firebaseApp, task.getResult()));
-                } else {
-                  listener.onError(task.getException().toString());
-                }
-              }
-            });
+    GoogleCredentials credentials = ImplFirebaseTrampolines.getCredential(firebaseApp)
+        .getGoogleCredentials();
+    try {
+      credentials.getRequestMetadata();
+      listener.onSuccess(credentials.getAccessToken().getTokenValue());
+    } catch (IOException e) {
+      listener.onError(e.toString());
+    }
   }
 
   @Override
   public void addTokenChangeListener(TokenChangeListener listener) {
     ImplFirebaseTrampolines.addAuthStateChangeListener(firebaseApp, wrap(listener));
-  }
-
-  @Override
-  public void removeTokenChangeListener(TokenChangeListener listener) {
-    ImplFirebaseTrampolines.removeAuthStateChangeListener(firebaseApp, wrap(listener));
   }
 
   private AuthStateListener wrap(TokenChangeListener listener) {

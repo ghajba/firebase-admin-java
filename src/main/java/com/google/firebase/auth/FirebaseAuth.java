@@ -22,6 +22,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.api.client.googleapis.auth.oauth2.GooglePublicKeysManager;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.util.Clock;
+import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.common.annotations.VisibleForTesting;
@@ -41,6 +42,7 @@ import com.google.firebase.tasks.Task;
 import com.google.firebase.tasks.Tasks;
 
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 /**
  * This class is the entry point for all server-side Firebase Authentication actions.
@@ -73,8 +75,11 @@ public class FirebaseAuth {
     this.googlePublicKeysManager = googlePublicKeysManager;
     this.clock = clock;
     this.jsonFactory = firebaseApp.getOptions().getJsonFactory();
+
+    GoogleCredentials credentials = ImplFirebaseTrampolines.getCredential(firebaseApp)
+        .getGoogleCredentials();
     this.userManager = new FirebaseUserManager(jsonFactory,
-        firebaseApp.getOptions().getHttpTransport());
+        firebaseApp.getOptions().getHttpTransport(), new HttpCredentialsAdapter(credentials));
   }
 
   /**
@@ -214,11 +219,11 @@ public class FirebaseAuth {
    */
   public Task<UserRecord> getUser(final String uid) {
     checkArgument(!Strings.isNullOrEmpty(uid), "uid must not be null or empty");
-    return ImplFirebaseTrampolines.getToken(firebaseApp, false).continueWith(
-        new Continuation<GetTokenResult, UserRecord>() {
+    return Tasks.call(
+        new Callable<UserRecord>() {
           @Override
-          public UserRecord then(Task<GetTokenResult> task) throws Exception {
-            return userManager.getUserById(uid, task.getResult().getToken());
+          public UserRecord call() throws Exception {
+            return userManager.getUserById(uid);
           }
         });
   }
@@ -234,11 +239,11 @@ public class FirebaseAuth {
    */
   public Task<UserRecord> getUserByEmail(final String email) {
     checkArgument(!Strings.isNullOrEmpty(email), "email must not be null or empty");
-    return ImplFirebaseTrampolines.getToken(firebaseApp, false).continueWith(
-        new Continuation<GetTokenResult, UserRecord>() {
+    return Tasks.call(
+        new Callable<UserRecord>() {
           @Override
-          public UserRecord then(Task<GetTokenResult> task) throws Exception {
-            return userManager.getUserByEmail(email, task.getResult().getToken());
+          public UserRecord call() throws Exception {
+            return userManager.getUserByEmail(email);
           }
         });
   }
@@ -255,12 +260,12 @@ public class FirebaseAuth {
    */
   public Task<UserRecord> createUser(final CreateRequest request) {
     checkNotNull(request, "create request must not be null");
-    return ImplFirebaseTrampolines.getToken(firebaseApp, false).continueWith(
-        new Continuation<GetTokenResult, UserRecord>() {
+    return Tasks.call(
+        new Callable<UserRecord>() {
           @Override
-          public UserRecord then(Task<GetTokenResult> task) throws Exception {
-            String uid = userManager.createUser(request, task.getResult().getToken());
-            return userManager.getUserById(uid, task.getResult().getToken());
+          public UserRecord call() throws Exception {
+            String uid = userManager.createUser(request);
+            return userManager.getUserById(uid);
           }
         });
   }
@@ -277,12 +282,12 @@ public class FirebaseAuth {
    */
   public Task<UserRecord> updateUser(final UpdateRequest request) {
     checkNotNull(request, "update request must not be null");
-    return ImplFirebaseTrampolines.getToken(firebaseApp, false).continueWith(
-        new Continuation<GetTokenResult, UserRecord>() {
+    return Tasks.call(
+        new Callable<UserRecord>() {
           @Override
-          public UserRecord then(Task<GetTokenResult> task) throws Exception {
-            userManager.updateUser(request, task.getResult().getToken());
-            return userManager.getUserById(request.getUid(), task.getResult().getToken());
+          public UserRecord call() throws Exception {
+            userManager.updateUser(request);
+            return userManager.getUserById(request.getUid());
           }
         });
   }
@@ -298,11 +303,11 @@ public class FirebaseAuth {
    */
   public Task<Void> deleteUser(final String uid) {
     checkArgument(!Strings.isNullOrEmpty(uid), "uid must not be null or empty");
-    return ImplFirebaseTrampolines.getToken(firebaseApp, false).continueWith(
-        new Continuation<GetTokenResult, Void>() {
+    return Tasks.call(
+        new Callable<Void>() {
           @Override
-          public Void then(Task<GetTokenResult> task) throws Exception {
-            userManager.deleteUser(uid, task.getResult().getToken());
+          public Void call() throws Exception {
+            userManager.deleteUser(uid);
             return null;
           }
         });

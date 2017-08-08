@@ -29,6 +29,7 @@ import com.google.api.client.http.json.JsonHttpContent;
 import com.google.api.client.json.GenericJson;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.JsonObjectParser;
+import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -72,9 +73,11 @@ class FirebaseUserManager {
    * @param jsonFactory JsonFactory instance used to transform Java objects into JSON and back.
    * @param transport HttpTransport used to make REST API calls.
    */
-  FirebaseUserManager(JsonFactory jsonFactory, HttpTransport transport) {
+  FirebaseUserManager(JsonFactory jsonFactory, HttpTransport transport,
+      HttpCredentialsAdapter adapter) {
     this.jsonFactory = checkNotNull(jsonFactory, "jsonFactory must not be null");
-    this.requestFactory = transport.createRequestFactory();
+    this.requestFactory = transport.createRequestFactory(
+        checkNotNull(adapter, "credential adapter must not be null"));
   }
 
   @VisibleForTesting
@@ -82,13 +85,12 @@ class FirebaseUserManager {
     this.interceptor = interceptor;
   }
 
-  UserRecord getUserById(String uid, String token) throws FirebaseAuthException {
+  UserRecord getUserById(String uid) throws FirebaseAuthException {
     final Map<String, Object> payload = ImmutableMap.<String, Object>of(
         "localId", ImmutableList.of(uid));
     GetAccountInfoResponse response;
     try {
-      response = post("getAccountInfo", token, payload,
-          GetAccountInfoResponse.class);
+      response = post("getAccountInfo", payload, GetAccountInfoResponse.class);
     } catch (IOException e) {
       throw new FirebaseAuthException(INTERNAL_ERROR,
           "IO error while retrieving user with ID: " + uid, e);
@@ -101,12 +103,12 @@ class FirebaseUserManager {
     return new UserRecord(response.getUsers().get(0));
   }
 
-  UserRecord getUserByEmail(String email, String token) throws FirebaseAuthException {
+  UserRecord getUserByEmail(String email) throws FirebaseAuthException {
     final Map<String, Object> payload = ImmutableMap.<String, Object>of(
         "email", ImmutableList.of(email));
     GetAccountInfoResponse response;
     try {
-      response = post("getAccountInfo", token, payload, GetAccountInfoResponse.class);
+      response = post("getAccountInfo", payload, GetAccountInfoResponse.class);
     } catch (IOException e) {
       throw new FirebaseAuthException(INTERNAL_ERROR,
           "IO error while retrieving user with email: " + email, e);
@@ -119,10 +121,10 @@ class FirebaseUserManager {
     return new UserRecord(response.getUsers().get(0));
   }
 
-  String createUser(CreateRequest request, String token) throws FirebaseAuthException {
+  String createUser(CreateRequest request) throws FirebaseAuthException {
     GenericJson response;
     try {
-      response = post("signupNewUser", token, request.getProperties(), GenericJson.class);
+      response = post("signupNewUser", request.getProperties(), GenericJson.class);
     } catch (IOException e) {
       throw new FirebaseAuthException(USER_CREATE_ERROR,
           "IO error while creating user account", e);
@@ -137,10 +139,10 @@ class FirebaseUserManager {
     throw new FirebaseAuthException(USER_CREATE_ERROR, "Failed to create new user");
   }
 
-  void updateUser(UpdateRequest request, String token) throws FirebaseAuthException {
+  void updateUser(UpdateRequest request) throws FirebaseAuthException {
     GenericJson response;
     try {
-      response = post("setAccountInfo", token, request.getProperties(), GenericJson.class);
+      response = post("setAccountInfo", request.getProperties(), GenericJson.class);
     } catch (IOException e) {
       throw new FirebaseAuthException(USER_UPDATE_ERROR,
           "IO error while updating user: " + request.getUid(), e);
@@ -152,11 +154,11 @@ class FirebaseUserManager {
     }
   }
 
-  void deleteUser(String uid, String token) throws FirebaseAuthException {
+  void deleteUser(String uid) throws FirebaseAuthException {
     final Map<String, Object> payload = ImmutableMap.<String, Object>of("localId", uid);
     GenericJson response;
     try {
-      response = post("deleteAccount", token, payload, GenericJson.class);
+      response = post("deleteAccount", payload, GenericJson.class);
     } catch (IOException e) {
       throw new FirebaseAuthException(USER_DELETE_ERROR,
           "IO error while deleting user: " + uid, e);
@@ -167,9 +169,8 @@ class FirebaseUserManager {
     }
   }
 
-  private <T> T post(String path, String token, Object content, Class<T> clazz) throws IOException {
+  private <T> T post(String path, Object content, Class<T> clazz) throws IOException {
     checkArgument(!Strings.isNullOrEmpty(path), "path must not be null or empty");
-    checkArgument(!Strings.isNullOrEmpty(token), "OAuth token must not be null or empty");
     checkNotNull(content, "content must not be null");
     checkNotNull(clazz, "response class must not be null");
 
@@ -177,8 +178,7 @@ class FirebaseUserManager {
     HttpRequest request = requestFactory.buildPostRequest(url,
         new JsonHttpContent(jsonFactory, content));
     request.setParser(new JsonObjectParser(jsonFactory));
-    request.getHeaders().setAuthorization("Bearer " + token)
-        .set(CLIENT_VERSION_HEADER, clientVersion);
+    request.getHeaders().set(CLIENT_VERSION_HEADER, clientVersion);
     request.setResponseInterceptor(interceptor);
     HttpResponse response = request.execute();
     try {

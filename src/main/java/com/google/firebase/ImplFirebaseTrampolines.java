@@ -55,15 +55,6 @@ public final class ImplFirebaseTrampolines {
     app.addAuthStateListener(listener);
   }
 
-  public static void removeAuthStateChangeListener(
-      @NonNull FirebaseApp app, @NonNull AuthStateListener listener) {
-    app.removeAuthStateListener(listener);
-  }
-
-  public static Task<GetTokenResult> getToken(@NonNull FirebaseApp app, boolean forceRefresh) {
-    return app.getToken(forceRefresh);
-  }
-
   public static <T extends FirebaseService> T getService(
       @NonNull FirebaseApp app, @NonNull String id, @NonNull Class<T> type) {
     return type.cast(app.getService(id));
