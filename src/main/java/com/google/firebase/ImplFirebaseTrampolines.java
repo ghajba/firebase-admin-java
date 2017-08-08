@@ -16,6 +16,7 @@
 
 package com.google.firebase;
 
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.auth.FirebaseCredential;
 import com.google.firebase.internal.AuthStateListener;
 import com.google.firebase.internal.FirebaseService;
@@ -36,6 +37,10 @@ public final class ImplFirebaseTrampolines {
 
   public static FirebaseCredential getCredential(@NonNull FirebaseApp app) {
     return app.getOptions().getCredential();
+  }
+
+  public static GoogleCredentials getGoogleCredentials(@NonNull FirebaseApp app) {
+    return getCredential(app).getGoogleCredentials();
   }
 
   public static boolean isDefaultApp(@NonNull FirebaseApp app) {

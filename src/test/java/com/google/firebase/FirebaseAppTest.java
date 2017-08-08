@@ -33,7 +33,6 @@ import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.base.Defaults;
 import com.google.common.io.BaseEncoding;
-import com.google.firebase.FirebaseApp.Clock;
 import com.google.firebase.FirebaseOptions.Builder;
 import com.google.firebase.auth.FirebaseCredential;
 import com.google.firebase.auth.FirebaseCredentials;
@@ -345,15 +344,9 @@ public class FirebaseAppTest {
 
   private static class MockGoogleCredentials extends GoogleCredentials {
 
-    private final Clock clock;
-
-    MockGoogleCredentials(Clock clock) {
-      this.clock = clock;
-    }
-
     @Override
     public AccessToken refreshAccessToken() throws IOException {
-      Date expiry = new Date(clock.now() + TimeUnit.HOURS.toMillis(1));
+      Date expiry = new Date(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1));
       return new AccessToken(UUID.randomUUID().toString(), expiry);
     }
   }
@@ -361,7 +354,7 @@ public class FirebaseAppTest {
   private static class MockFirebaseCredential extends FirebaseCredential {
 
     MockFirebaseCredential() {
-      super(new MockGoogleCredentials(new Clock()));
+      super(new MockGoogleCredentials());
     }
   }
 }

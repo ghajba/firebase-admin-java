@@ -42,7 +42,7 @@ public final class TestOnlyImplFirebaseTrampolines {
   }
 
   public static Task<GetTokenResult> getToken(FirebaseApp app, boolean forceRefresh) {
-    GoogleCredentials googleCredentials = app.getOptions().getCredential().getGoogleCredentials();
+    GoogleCredentials googleCredentials = ImplFirebaseTrampolines.getGoogleCredentials(app);
     try {
       if (forceRefresh) {
         googleCredentials.refresh();

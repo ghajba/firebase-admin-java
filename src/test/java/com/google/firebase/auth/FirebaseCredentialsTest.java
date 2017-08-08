@@ -63,6 +63,12 @@ public class FirebaseCredentialsTest {
     FirebaseCredentials.fromRefreshToken(null);
   }
 
+  private String getAccessToken(FirebaseCredential credential) throws IOException {
+    GoogleCredentials googleCredentials = credential.getGoogleCredentials();
+    googleCredentials.refresh();
+    return googleCredentials.getAccessToken().getTokenValue();
+  }
+
   @Test
   public void defaultCredentialDoesntRefetch() throws Exception {
     MockTokenServerTransport transport = new MockTokenServerTransport();
@@ -78,20 +84,13 @@ public class FirebaseCredentialsTest {
             .build();
     TestUtils.setEnvironmentVariables(environmentVariables);
 
-    GoogleOAuthAccessToken token =
-        Tasks.await(
-            FirebaseCredentials.applicationDefault(transport)
-                .getAccessToken());
-    Assert.assertEquals(ACCESS_TOKEN, token.getAccessToken());
+    String token = getAccessToken(FirebaseCredentials.applicationDefault(transport));
+    Assert.assertEquals(ACCESS_TOKEN, token);
 
     // We should still be able to fetch the token since the certificate is cached
     Assert.assertTrue(credentialsFile.delete());
-    token =
-        Tasks.await(
-            FirebaseCredentials.applicationDefault(transport)
-                .getAccessToken());
-    Assert.assertNotNull(token);
-    Assert.assertEquals(ACCESS_TOKEN, token.getAccessToken());
+    token = getAccessToken(FirebaseCredentials.applicationDefault(transport));
+    Assert.assertEquals(ACCESS_TOKEN, token);
   }
 
   @Test
@@ -104,8 +103,8 @@ public class FirebaseCredentialsTest {
         FirebaseCredentials.fromCertificate(
             ServiceAccount.EDITOR.asStream(), transport);
 
-    Tasks.await(credential.getAccessToken());
-    Tasks.await(credential.getAccessToken());
+    getAccessToken(credential);
+    getAccessToken(credential);
   }
 
   @Test
@@ -124,7 +123,7 @@ public class FirebaseCredentialsTest {
     Assert.assertEquals(0, inputStream.available());
     inputStream.close();
 
-    Tasks.await(credential.getAccessToken());
+    getAccessToken(credential);
   }
 
   @Test
@@ -210,7 +209,7 @@ public class FirebaseCredentialsTest {
     Assert.assertEquals(0, inputStream.available());
     inputStream.close();
 
-    Tasks.await(credential.getAccessToken());
+    getAccessToken(credential);
   }
 
   @Test
@@ -257,7 +256,7 @@ public class FirebaseCredentialsTest {
     TestCredential credential = new TestCredential(googleCredential);
 
     for (long i = 0; i < 10; i++) {
-      Assert.assertEquals(ACCESS_TOKEN, Tasks.await(credential.getAccessToken()).getAccessToken());
+      Assert.assertEquals(ACCESS_TOKEN, getAccessToken(credential));
       Assert.assertEquals(i + 1, googleCredential.fetchCount);
     }
   }
@@ -266,14 +265,14 @@ public class FirebaseCredentialsTest {
   public void testTokenExpiration() throws Exception {
     final MockGoogleCredentials googleCredential = new MockGoogleCredentials();
     googleCredential.accessToken = ACCESS_TOKEN;
-    TestCredential credential = new TestCredential(googleCredential);
 
     for (long i = 0; i < 10; i++) {
       long expiryTime = (i + 1) * 10L;
       googleCredential.expiryTime = expiryTime;
-      GoogleOAuthAccessToken googleToken = Tasks.await(credential.getAccessToken());
-      Assert.assertEquals(ACCESS_TOKEN, googleToken.getAccessToken());
-      Assert.assertEquals(expiryTime, googleToken.getExpiryTime());
+      googleCredential.refresh();
+      AccessToken token = googleCredential.getAccessToken();
+      Assert.assertEquals(ACCESS_TOKEN, token.getTokenValue());
+      Assert.assertEquals(expiryTime, token.getExpirationTime().getTime());
     }
   }
 

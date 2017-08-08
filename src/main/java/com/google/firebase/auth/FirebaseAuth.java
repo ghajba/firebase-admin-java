@@ -35,7 +35,6 @@ import com.google.firebase.auth.UserRecord.UpdateRequest;
 import com.google.firebase.auth.internal.FirebaseTokenFactory;
 import com.google.firebase.auth.internal.FirebaseTokenVerifier;
 import com.google.firebase.internal.FirebaseService;
-import com.google.firebase.internal.GetTokenResult;
 import com.google.firebase.internal.NonNull;
 import com.google.firebase.tasks.Continuation;
 import com.google.firebase.tasks.Task;
@@ -75,11 +74,10 @@ public class FirebaseAuth {
     this.googlePublicKeysManager = googlePublicKeysManager;
     this.clock = clock;
     this.jsonFactory = firebaseApp.getOptions().getJsonFactory();
-
-    GoogleCredentials credentials = ImplFirebaseTrampolines.getCredential(firebaseApp)
-        .getGoogleCredentials();
-    this.userManager = new FirebaseUserManager(jsonFactory,
-        firebaseApp.getOptions().getHttpTransport(), new HttpCredentialsAdapter(credentials));
+    this.userManager = new FirebaseUserManager(
+        jsonFactory,
+        firebaseApp.getOptions().getHttpTransport(),
+        new HttpCredentialsAdapter(ImplFirebaseTrampolines.getGoogleCredentials(firebaseApp)));
   }
 
   /**
@@ -134,8 +132,7 @@ public class FirebaseAuth {
    */
   public Task<String> createCustomToken(
       final String uid, final Map<String, Object> developerClaims) {
-    FirebaseCredential credential = ImplFirebaseTrampolines.getCredential(firebaseApp);
-    GoogleCredentials googleCredentials = credential.getGoogleCredentials();
+    GoogleCredentials googleCredentials = ImplFirebaseTrampolines.getGoogleCredentials(firebaseApp);
     if (!(googleCredentials instanceof ServiceAccountCredentials)) {
       return Tasks.forException(
           new FirebaseException(

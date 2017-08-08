@@ -53,8 +53,7 @@ public class JvmAuthTokenProvider implements AuthTokenProvider {
 
   @Override
   public void getToken(boolean forceRefresh, final GetTokenCompletionListener listener) {
-    GoogleCredentials credentials = ImplFirebaseTrampolines.getCredential(firebaseApp)
-        .getGoogleCredentials();
+    GoogleCredentials credentials = ImplFirebaseTrampolines.getGoogleCredentials(firebaseApp);
     try {
       credentials.getRequestMetadata();
       listener.onSuccess(credentials.getAccessToken().getTokenValue());
