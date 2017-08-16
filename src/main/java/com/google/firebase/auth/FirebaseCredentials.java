@@ -24,6 +24,7 @@ import com.google.auth.http.HttpTransportFactory;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.auth.oauth2.UserCredentials;
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.CharStreams;
 import com.google.firebase.internal.NonNull;
 import com.google.firebase.tasks.Task;
@@ -35,6 +36,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
+import java.util.List;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -43,6 +45,20 @@ import org.json.JSONObject;
  * com.google.firebase.FirebaseOptions}.
  */
 public class FirebaseCredentials {
+
+  private static final List<String> FIREBASE_SCOPES =
+      ImmutableList.of(
+          // Enables access to Firebase Realtime Database.
+          "https://www.googleapis.com/auth/firebase.database",
+
+          // Enables access to the email address associated with a project.
+          "https://www.googleapis.com/auth/userinfo.email",
+
+          // Enables access to Google Identity Toolkit (for user management APIs).
+          "https://www.googleapis.com/auth/identitytoolkit",
+
+          // Enables access to Google Cloud Storage.
+          "https://www.googleapis.com/auth/devstorage.full_control");
 
   private FirebaseCredentials() {
   }

@@ -77,6 +77,10 @@ public class IntegrationTestUtils {
     return "https://" + getProjectId() + ".firebaseio.com";
   }
 
+  public static String getStorageBucket() {
+    return getProjectId() + ".appspot.com";
+  }
+
   public static String getApiKey() {
     String apiKey = System.getProperty("firebase.it.apikey");
     checkArgument(!Strings.isNullOrEmpty(apiKey), "API key not specified. Set the "
@@ -97,6 +101,7 @@ public class IntegrationTestUtils {
       FirebaseOptions options =
           new FirebaseOptions.Builder()
               .setDatabaseUrl(getDatabaseUrl())
+              .setStorageBucket(getStorageBucket())
               .setCredential(TestUtils.getCertCredential(getServiceAccountCertificate()))
               .build();
       masterApp = FirebaseApp.initializeApp(options);
