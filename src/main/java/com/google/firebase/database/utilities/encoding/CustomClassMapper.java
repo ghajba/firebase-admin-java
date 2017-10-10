@@ -58,10 +58,12 @@ public class CustomClassMapper {
   private static final ConcurrentMap<Class<?>, BeanMapper<?>> mappers = new ConcurrentHashMap<>();
 
   /**
-   * Converts a Java representation of JSON data to standard library Java data types: Map, Array,
-   * String, Double, Integer and Boolean. POJOs are converted to Java Maps.
+   * Converts a Java representation of JSON data to standard library Java data
+   * types: Map, Array, String, Double, Integer and Boolean. POJOs are converted
+   * to Java Maps.
    *
-   * @param object The representation of the JSON data
+   * @param object
+   *          The representation of the JSON data
    * @return JSON representation containing only standard library Java types
    */
   public static Object convertToPlainJavaTypes(Object object) {
@@ -76,11 +78,13 @@ public class CustomClassMapper {
   }
 
   /**
-   * Converts a standard library Java representation of JSON data to an object of the provided
-   * class.
+   * Converts a standard library Java representation of JSON data to an object of
+   * the provided class.
    *
-   * @param object The representation of the JSON data
-   * @param clazz The class of the object to convert to
+   * @param object
+   *          The representation of the JSON data
+   * @param clazz
+   *          The class of the object to convert to
    * @return The POJO object.
    */
   public static <T> T convertToCustomClass(Object object, Class<T> clazz) {
@@ -88,11 +92,13 @@ public class CustomClassMapper {
   }
 
   /**
-   * Converts a standard library Java representation of JSON data to an object of the class provided
-   * through the GenericTypeIndicator
+   * Converts a standard library Java representation of JSON data to an object of
+   * the class provided through the GenericTypeIndicator
    *
-   * @param object The representation of the JSON data
-   * @param typeIndicator The indicator providing class of the object to convert to
+   * @param object
+   *          The representation of the JSON data
+   * @param typeIndicator
+   *          The indicator providing class of the object to convert to
    * @return The POJO object.
    */
   public static <T> T convertToCustomClass(Object object, GenericTypeIndicator<T> typeIndicator) {
@@ -170,7 +176,7 @@ public class CustomClassMapper {
     }
   }
 
-  @SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})
+  @SuppressWarnings({ "unchecked", "TypeParameterUnusedInFormals" })
   private static <T> T deserializeToType(Object obj, Type type) {
     if (obj == null) {
       return null;
@@ -192,10 +198,8 @@ public class CustomClassMapper {
   private static <T> T deserializeToClass(Object obj, Class<T> clazz) {
     if (obj == null) {
       return null;
-    } else if (clazz.isPrimitive()
-        || isPrimitiveNumeric(clazz)
-        || Boolean.class.isAssignableFrom(clazz)
-        || Character.class.isAssignableFrom(clazz)) {
+    } else if (clazz.isPrimitive() || isPrimitiveNumeric(clazz)
+        || Boolean.class.isAssignableFrom(clazz) || Character.class.isAssignableFrom(clazz)) {
       return deserializeToPrimitive(obj, clazz);
     } else if (String.class.isAssignableFrom(clazz)) {
       return (T) convertString(obj);
@@ -203,11 +207,8 @@ public class CustomClassMapper {
       throw new DatabaseException(
           "Converting to Arrays is not supported, please use Lists" + "instead");
     } else if (clazz.getTypeParameters().length > 0) {
-      throw new DatabaseException(
-          "Class "
-              + clazz.getName()
-              + " has generic type "
-              + "parameters, please use GenericTypeIndicator instead");
+      throw new DatabaseException("Class " + clazz.getName() + " has generic type "
+          + "parameters, please use GenericTypeIndicator instead");
     } else if (clazz.equals(Object.class)) {
       return (T) obj;
     } else if (clazz.isEnum()) {
@@ -216,14 +217,13 @@ public class CustomClassMapper {
       return convertBean(obj, clazz);
     }
   }
-  
+
   private static <T> boolean isPrimitiveNumeric(Class<T> clazz) {
-    return Number.class.isAssignableFrom(clazz) 
-          && !BigDecimal.class.isAssignableFrom(clazz) 
-          && !BigInteger.class.isAssignableFrom(clazz);
+    return Number.class.isAssignableFrom(clazz) && !BigDecimal.class.isAssignableFrom(clazz)
+        && !BigInteger.class.isAssignableFrom(clazz);
   }
 
-  @SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})
+  @SuppressWarnings({ "unchecked", "TypeParameterUnusedInFormals" })
   private static <T> T deserializeToParameterizedType(Object obj, ParameterizedType type) {
     // getRawType should always return a Class<?>
     Class<?> rawType = (Class<?>) type.getRawType();
@@ -244,10 +244,8 @@ public class CustomClassMapper {
       Type keyType = type.getActualTypeArguments()[0];
       Type valueType = type.getActualTypeArguments()[1];
       if (!keyType.equals(String.class)) {
-        throw new DatabaseException(
-            "Only Maps with string keys are supported, "
-                + "but found Map with key type "
-                + keyType);
+        throw new DatabaseException("Only Maps with string keys are supported, "
+            + "but found Map with key type " + keyType);
       }
       Map<String, Object> map = expectMap(obj);
       HashMap<String, Object> result = new HashMap<>();
@@ -309,11 +307,8 @@ public class CustomClassMapper {
             "Could not find enum value of " + clazz.getName() + " for value \"" + value + "\"");
       }
     } else {
-      throw new DatabaseException(
-          "Expected a String while deserializing to enum "
-              + clazz
-              + " but got a "
-              + object.getClass());
+      throw new DatabaseException("Expected a String while deserializing to enum " + clazz
+          + " but got a " + object.getClass());
     }
   }
 
@@ -348,10 +343,8 @@ public class CustomClassMapper {
       if (value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE) {
         return ((Number) obj).intValue();
       } else {
-        throw new DatabaseException(
-            "Numeric value out of 32-bit integer range: "
-                + value
-                + ". Did you mean to use a long or double instead of an int?");
+        throw new DatabaseException("Numeric value out of 32-bit integer range: " + value
+            + ". Did you mean to use a long or double instead of an int?");
       }
     } else {
       throw new DatabaseException(
@@ -369,10 +362,8 @@ public class CustomClassMapper {
       if (value >= Long.MIN_VALUE && value <= Long.MAX_VALUE) {
         return value.longValue();
       } else {
-        throw new DatabaseException(
-            "Numeric value out of 64-bit long range: "
-                + value
-                + ". Did you mean to use a double instead of a long?");
+        throw new DatabaseException("Numeric value out of 64-bit long range: " + value
+            + ". Did you mean to use a double instead of a long?");
       }
     } else {
       throw new DatabaseException(
@@ -389,11 +380,8 @@ public class CustomClassMapper {
       if (doubleValue.longValue() == value) {
         return doubleValue;
       } else {
-        throw new DatabaseException(
-            "Loss of precision while converting number to "
-                + "double: "
-                + obj
-                + ". Did you mean to use a 64-bit long instead?");
+        throw new DatabaseException("Loss of precision while converting number to " + "double: "
+            + obj + ". Did you mean to use a 64-bit long instead?");
       }
     } else if (obj instanceof Double) {
       return (Double) obj;
@@ -426,11 +414,8 @@ public class CustomClassMapper {
     if (obj instanceof Map) {
       return mapper.deserialize(expectMap(obj));
     } else {
-      throw new DatabaseException(
-          "Can't convert object of type "
-              + obj.getClass().getName()
-              + " to type "
-              + clazz.getName());
+      throw new DatabaseException("Can't convert object of type " + obj.getClass().getName()
+          + " to type " + clazz.getName());
     }
   }
 
@@ -472,10 +457,15 @@ public class CustomClassMapper {
           String propertyName = propertyName(method);
           addProperty(propertyName);
           method.setAccessible(true);
-          if (getters.containsKey(propertyName)) {
+          if (this.getters.containsKey(propertyName)) {
+            Method storedMethod = this.getters.get(propertyName);
+            if (storedMethod.getReturnType().isAssignableFrom(method.getReturnType())
+                || method.getReturnType().isAssignableFrom(storedMethod.getReturnType())) {
+              continue;
+            }
             throw new DatabaseException("Found conflicting getters for name: " + method.getName());
           }
-          getters.put(propertyName, method);
+          this.getters.put(propertyName, method);
         }
       }
 
@@ -488,8 +478,10 @@ public class CustomClassMapper {
         }
       }
 
-      // We can use private setters and fields for known (public) properties/getters. Since
-      // getMethods/getFields only returns public methods/fields we need to traverse the
+      // We can use private setters and fields for known (public) properties/getters.
+      // Since
+      // getMethods/getFields only returns public methods/fields we need to traverse
+      // the
       // class hierarchy to find the appropriate setter or field.
       Class<? super T> currentClass = clazz;
       do {
@@ -497,28 +489,22 @@ public class CustomClassMapper {
         for (Method method : currentClass.getDeclaredMethods()) {
           if (shouldIncludeSetter(method)) {
             String propertyName = propertyName(method);
-            String existingPropertyName = properties.get(propertyName.toLowerCase());
+            String existingPropertyName = this.properties.get(propertyName.toLowerCase());
             if (existingPropertyName != null) {
               if (!existingPropertyName.equals(propertyName)) {
                 throw new DatabaseException(
                     "Found setter with invalid case-sensitive name: " + method.getName());
               } else {
-                Method existingSetter = setters.get(propertyName);
+                Method existingSetter = this.setters.get(propertyName);
                 if (existingSetter == null) {
                   method.setAccessible(true);
-                  setters.put(propertyName, method);
+                  this.setters.put(propertyName, method);
                 } else if (!isSetterOverride(method, existingSetter)) {
                   // We require that setters with conflicting property names are
                   // overrides from a base class
-                  throw new DatabaseException(
-                      "Found a conflicting setters "
-                          + "with name: "
-                          + method.getName()
-                          + " (conflicts with "
-                          + existingSetter.getName()
-                          + " defined on "
-                          + existingSetter.getDeclaringClass().getName()
-                          + ")");
+                  throw new DatabaseException("Found a conflicting setters " + "with name: "
+                      + method.getName() + " (conflicts with " + existingSetter.getName()
+                      + " defined on " + existingSetter.getDeclaringClass().getName() + ")");
                 }
               }
             }
@@ -530,20 +516,21 @@ public class CustomClassMapper {
 
           // Case sensitivity is checked at deserialization time
           // Fields are only added if they don't exist on a subclass
-          if (properties.containsKey(propertyName.toLowerCase())
-              && !fields.containsKey(propertyName)) {
+          if (this.properties.containsKey(propertyName.toLowerCase())
+              && !this.fields.containsKey(propertyName)) {
             field.setAccessible(true);
-            fields.put(propertyName, field);
+            this.fields.put(propertyName, field);
           }
         }
 
-        // Traverse class hierarchy until we reach java.lang.Object which contains a bunch
+        // Traverse class hierarchy until we reach java.lang.Object which contains a
+        // bunch
         // of fields/getters we don't want to serialize
         currentClass = currentClass.getSuperclass();
       }
       while (currentClass != null && !currentClass.equals(Object.class));
 
-      if (properties.isEmpty()) {
+      if (this.properties.isEmpty()) {
         throw new DatabaseException("No properties to serialize found on class " + clazz.getName());
       }
     }
@@ -632,8 +619,7 @@ public class CustomClassMapper {
 
     private static boolean isSetterOverride(Method base, Method override) {
       // We expect an overridden setter here
-      hardAssert(
-          base.getDeclaringClass().isAssignableFrom(override.getDeclaringClass()),
+      hardAssert(base.getDeclaringClass().isAssignableFrom(override.getDeclaringClass()),
           "Expected override from a base class");
       hardAssert(base.getReturnType().equals(Void.TYPE), "Expected void return type");
       hardAssert(override.getReturnType().equals(Void.TYPE), "Expected void return type");
@@ -667,7 +653,7 @@ public class CustomClassMapper {
     }
 
     private static String serializedName(String methodName) {
-      String[] prefixes = new String[] {"get", "set", "is"};
+      String[] prefixes = new String[] { "get", "set", "is" };
       String methodPrefix = null;
       for (String prefix : prefixes) {
         if (methodName.startsWith(prefix)) {
@@ -692,10 +678,8 @@ public class CustomClassMapper {
     private void addProperty(String property) {
       String oldValue = this.properties.put(property.toLowerCase(), property);
       if (oldValue != null && !property.equals(oldValue)) {
-        throw new DatabaseException(
-            "Found two getters or fields with conflicting case "
-                + "sensitivity for property: "
-                + property.toLowerCase());
+        throw new DatabaseException("Found two getters or fields with conflicting case "
+            + "sensitivity for property: " + property.toLowerCase());
       }
     }
 
@@ -739,12 +723,8 @@ public class CustomClassMapper {
             throw new RuntimeException(e);
           }
         } else {
-          String message =
-              "No setter/field for "
-                  + propertyName
-                  + " found "
-                  + "on class "
-                  + this.clazz.getName();
+          String message = "No setter/field for " + propertyName + " found " + "on class "
+              + this.clazz.getName();
           if (this.properties.containsKey(propertyName.toLowerCase())) {
             message += " (fields/setters are case sensitive!)";
           }
@@ -772,12 +752,9 @@ public class CustomClassMapper {
     }
 
     public Map<String, Object> serialize(T object) {
-      if (!clazz.isAssignableFrom(object.getClass())) {
-        throw new IllegalArgumentException(
-            "Can't serialize object of class "
-                + object.getClass()
-                + " with BeanMapper for class "
-                + clazz);
+      if (!this.clazz.isAssignableFrom(object.getClass())) {
+        throw new IllegalArgumentException("Can't serialize object of class " + object.getClass()
+            + " with BeanMapper for class " + this.clazz);
       }
       Map<String, Object> result = new HashMap<>();
       for (String property : this.properties.values()) {
